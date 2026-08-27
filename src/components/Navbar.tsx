@@ -135,7 +135,7 @@ export const Navbar: React.FC = () => {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-lg sm:text-xl font-extrabold tracking-tight text-stone-900 font-heading">
-                  junejo
+                  JUNEJO
                 </span>
                 <span className="text-xs sm:text-sm font-bold text-emerald-800 tracking-wider uppercase bg-emerald-100/70 backdrop-blur-xs px-1.5 py-0.5 rounded-md border border-emerald-300/60">
                   SUPERSTORE
@@ -221,7 +221,7 @@ export const Navbar: React.FC = () => {
             {/* WhatsApp Quick Order button */}
             <a
               id="btn-nav-whatsapp-quick"
-              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum junejo SUPERSTORE! I would like to inquire about grocery delivery.')}`}
+              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum JUNEJO SUPERSTORE! I would like to inquire about grocery delivery.')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden lg:flex items-center gap-2 px-3 py-2 bg-emerald-50/80 backdrop-blur-xs text-emerald-800 hover:bg-emerald-100/90 border border-emerald-300/80 rounded-2xl text-xs font-bold transition-colors shadow-2xs"
@@ -418,7 +418,7 @@ export const Navbar: React.FC = () => {
           {/* WhatsApp Direct */}
           <div className="pt-2">
             <a
-              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum junejo SUPERSTORE! I want to order groceries.')}`}
+              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum JUNEJO SUPERSTORE! I want to order groceries.')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-sm transition-colors"

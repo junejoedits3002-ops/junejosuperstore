@@ -89,7 +89,7 @@ export const CheckoutPage: React.FC = () => {
     }
 
     if (!isHyderabad) {
-      errs.city = 'Sorry, junejo SUPERSTORE currently delivers only within Hyderabad.';
+      errs.city = 'Sorry, JUNEJO SUPERSTORE currently delivers only within Hyderabad.';
     }
 
     setErrors(errs);
@@ -321,7 +321,7 @@ export const CheckoutPage: React.FC = () => {
                       <AlertTriangle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                       <div className="space-y-1 text-xs">
                         <p className="font-extrabold text-sm text-rose-900">
-                          Sorry, junejo SUPERSTORE currently delivers only within Hyderabad.
+                          Sorry, JUNEJO SUPERSTORE currently delivers only within Hyderabad.
                         </p>
                         <p className="text-rose-700">
                           We are currently unable to accept delivery orders outside Hyderabad, Sindh. Please change your delivery location to a valid Hyderabad address to complete checkout.

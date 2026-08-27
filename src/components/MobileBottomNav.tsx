@@ -21,7 +21,7 @@ export const MobileBottomNav: React.FC = () => {
   const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   const handleWhatsAppFloating = () => {
-    const url = `https://wa.me/${storeSettings.whatsappNumber}?text=Assalam%20o%20Alaikum%20junejo%20Superstore!%20I%20want%20to%20place%20a%20grocery%20order...`;
+    const url = `https://wa.me/${storeSettings.whatsappNumber}?text=Assalam%20o%20Alaikum%20JUNEJO%20Superstore!%20I%20want%20to%20place%20a%20grocery%20order...`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 

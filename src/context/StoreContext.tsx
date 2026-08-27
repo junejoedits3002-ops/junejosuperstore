@@ -118,15 +118,15 @@ interface StoreContextType {
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
-  PRODUCTS: 'junejo_products_v2',
-  CATEGORIES: 'junejo_categories_v2',
-  PACKAGES: 'junejo_rashan_packages_v2',
-  SETTINGS: 'junejo_settings_v2',
-  HERO: 'junejo_hero_config_v2',
-  BANNERS: 'junejo_banners_v2',
-  CART: 'junejo_cart_v2',
-  COUPON: 'junejo_coupon_v2',
-  ORDERS: 'junejo_orders_v2',
+  PRODUCTS: 'JUNEJO_products_v2',
+  CATEGORIES: 'JUNEJO_categories_v2',
+  PACKAGES: 'JUNEJO_rashan_packages_v2',
+  SETTINGS: 'JUNEJO_settings_v2',
+  HERO: 'JUNEJO_hero_config_v2',
+  BANNERS: 'JUNEJO_banners_v2',
+  CART: 'JUNEJO_cart_v2',
+  COUPON: 'JUNEJO_coupon_v2',
+  ORDERS: 'JUNEJO_orders_v2',
 };
 
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

@@ -151,7 +151,7 @@ export const AdminHomepageTab: React.FC = () => {
                 type="text"
                 value={heroForm.heading}
                 onChange={(e) => setHeroForm({ ...heroForm, heading: e.target.value })}
-                placeholder="e.g. junejo"
+                placeholder="e.g. JUNEJO"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm font-bold text-stone-900 focus:outline-emerald-600"
               />
             </div>

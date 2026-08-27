@@ -109,7 +109,7 @@ export const ProductCatalog: React.FC<ProductCatalogProps> = ({ initialDealOnly 
                 ? 'Supermarket Deals & Discounts'
                 : activeCategory
                 ? `${activeCategory} Aisle`
-                : 'junejo Grocery Catalog'}
+                : 'JUNEJO Grocery Catalog'}
             </h1>
             <p className="text-xs sm:text-sm text-stone-500 mt-1">
               Showing <span className="font-bold text-stone-900">{filteredProducts.length}</span> authentic grocery staples &amp; household essentials

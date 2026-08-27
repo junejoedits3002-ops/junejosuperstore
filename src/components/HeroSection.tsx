@@ -78,7 +78,7 @@ export const HeroSection: React.FC = () => {
             {/* Main Headline */}
             <div className="space-y-2">
               <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight font-heading leading-tight sm:leading-none">
-                {heroConfig.heading || 'junejo'} <span className="text-emerald-400">{heroConfig.highlightWord || 'SUPERSTORE'}</span>
+                {heroConfig.heading || 'JUNEJO'} <span className="text-emerald-400">{heroConfig.highlightWord || 'SUPERSTORE'}</span>
               </h1>
               <p className="text-xl sm:text-2xl lg:text-3xl font-medium text-stone-200 leading-snug">
                 {heroConfig.subheading || '“Everything You Need for Your Home, All in One Place.”'}

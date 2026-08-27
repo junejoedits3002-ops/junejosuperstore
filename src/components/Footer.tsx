@@ -18,7 +18,7 @@ export const Footer: React.FC = () => {
   const { setActiveView, setActiveCategory, categories, storeSettings } = useStore();
 
   const handleWhatsAppContact = () => {
-    const url = `https://wa.me/${storeSettings.whatsappNumber}?text=Assalam%20o%20Alaikum%20junejo%20Superstore!%20I%20have%20an%20inquiry%20regarding%20monthly%20grocery...`;
+    const url = `https://wa.me/${storeSettings.whatsappNumber}?text=Assalam%20o%20Alaikum%20JUNEJO%20Superstore!%20I%20have%20an%20inquiry%20regarding%20monthly%20grocery...`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -86,7 +86,7 @@ export const Footer: React.FC = () => {
               </div>
               <div>
                 <span className="text-lg font-black tracking-tight text-white font-heading block">
-                  junejo <span className="text-amber-400">SUPERSTORE</span>
+                  JUNEJO <span className="text-amber-400">SUPERSTORE</span>
                 </span>
                 <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
                   Pakistani Local Supermarket
@@ -266,7 +266,7 @@ export const Footer: React.FC = () => {
 
         {/* Copyright & Disclaimer */}
         <div className="border-t border-stone-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-500">
-          <p>© {new Date().getFullYear()} junejo SUPERSTORE Pakistan. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} JUNEJO SUPERSTORE Pakistan. All rights reserved.</p>
           <div className="flex items-center gap-4">
             <button type="button" onClick={() => setActiveView('admin')} className="hover:text-stone-400">
               Admin Login

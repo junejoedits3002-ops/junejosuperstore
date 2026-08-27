@@ -66,7 +66,7 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
       setFormData({
         name: '',
         nameUrdu: '',
-        brand: 'junejo Staples',
+        brand: 'JUNEJO Staples',
         category: categories[0]?.name || 'Flour & Grains (Atta, Rice)',
         subcategory: '',
         weight: '1 kg',

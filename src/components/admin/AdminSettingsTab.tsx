@@ -43,7 +43,7 @@ export const AdminSettingsTab: React.FC = () => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `junejo-superstore-backup-${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `JUNEJO-superstore-backup-${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -182,7 +182,7 @@ export const AdminSettingsTab: React.FC = () => {
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm({ ...form, email: e.target.value })}
-                placeholder="orders@junejosuperstore.pk"
+                placeholder="orders@JUNEJOsuperstore.pk"
                 className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300 text-sm font-medium text-stone-900 focus:outline-emerald-600"
               />
             </div>

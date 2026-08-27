@@ -84,7 +84,7 @@ export const OrderSuccessModal: React.FC = () => {
             </div>
 
             <span className="text-xs font-black uppercase tracking-widest text-emerald-300 bg-emerald-950/70 px-3 py-1 rounded-full border border-emerald-700/40">
-              junejo SUPERSTORE ORDER CONFIRMED
+              JUNEJO SUPERSTORE ORDER CONFIRMED
             </span>
 
             <h1 className="text-2xl sm:text-3xl font-black font-heading tracking-tight text-white">

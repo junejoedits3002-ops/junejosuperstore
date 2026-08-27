@@ -48,7 +48,7 @@ export const QuickReorderModal: React.FC = () => {
             Quick Reorder Past Groceries
           </h1>
           <p className="text-xs sm:text-sm text-stone-500">
-            Enter your mobile number to lookup your previous junejo SUPERSTORE orders and instantly re-fill your cart.
+            Enter your mobile number to lookup your previous JUNEJO SUPERSTORE orders and instantly re-fill your cart.
           </p>
         </div>
 
