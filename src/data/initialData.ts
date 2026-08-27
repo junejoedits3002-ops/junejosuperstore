@@ -1012,7 +1012,7 @@ export const INITIAL_STORE_SETTINGS: StoreSettings = {
   storeName: 'JUNEJO SUPERSTORE',
   tagline: 'Your Monthly Grocery, Sorted.',
   whatsappNumber: '+923001234567',
-  phone: '+92 300 1234567 / (022) 2781234',
+  phone: '+923133588214 / (022) 2781234',
   email: 'orders@JUNEJOsuperstore.pk',
   address: 'Main Autobahn Road / Saddar, Hyderabad, Sindh, Pakistan',
   city: 'Hyderabad, Sindh, Pakistan',
