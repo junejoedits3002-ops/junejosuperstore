@@ -72,7 +72,7 @@ export const Navbar: React.FC = () => {
     { label: 'Rashan Builder', view: 'rashan-builder' as const, icon: Layers, badge: 'Custom' },
     { label: 'Deals & Discounts', view: 'deals' as const, icon: Tag, badge: 'Hot' },
     { label: 'Quick Reorder', view: 'reorder' as const, icon: RotateCcw },
-    { label: 'Admin Portal', view: 'admin' as const, icon: SlidersHorizontal },
+  
   ];
 
   return (

@@ -194,16 +194,7 @@ export const Footer: React.FC = () => {
                   <span>Quick 1-Click Reorder</span>
                 </button>
               </li>
-              <li>
-                <button
-                  type="button"
-                  onClick={() => setActiveView('admin')}
-                  className="hover:text-emerald-400 flex items-center gap-1 transition-colors text-stone-500"
-                >
-                  <ChevronRight className="w-3 h-3 text-stone-700" />
-                  <span>Store Owner Admin Panel</span>
-                </button>
-              </li>
+             
             </ul>
           </div>
 
@@ -268,9 +259,7 @@ export const Footer: React.FC = () => {
         <div className="border-t border-stone-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-500">
           <p>© {new Date().getFullYear()} JUNEJO SUPERSTORE Pakistan. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            <button type="button" onClick={() => setActiveView('admin')} className="hover:text-stone-400">
-              Admin Login
-            </button>
+            
             <span>•</span>
             <span>Made for Pakistani Families with pride</span>
           </div>
