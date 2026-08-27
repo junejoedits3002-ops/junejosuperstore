@@ -1,0 +1,6 @@
+{
+  "name": "JUNEO SUPERSTORE",
+  "description": "Modern Pakistani online supermarket offering everyday groceries, household essentials, and customizable Monthly Rashan packages.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
