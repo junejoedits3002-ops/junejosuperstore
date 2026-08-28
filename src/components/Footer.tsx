@@ -18,7 +18,7 @@ export const Footer: React.FC = () => {
   const { setActiveView, setActiveCategory, categories, storeSettings } = useStore();
 
   const handleWhatsAppContact = () => {
-    const url = `https://wa.me/${storeSettings.whatsappNumber}?text=Assalam%20o%20Alaikum%20JUNEJO%20Superstore!%20I%20have%20an%20inquiry%20regarding%20monthly%20grocery...`;
+    const url = `https://wa.me/${storeSettings.whatsappNumber}?text=Assalam%20o%20Alaikum%20Junejo%20Superstore!%20I%20have%20an%20inquiry%20regarding%20monthly%20grocery%20delivery%20in%20Hyderabad...`;
     window.open(url, '_blank', 'noopener,noreferrer');
   };
 
@@ -194,7 +194,6 @@ export const Footer: React.FC = () => {
                   <span>Quick 1-Click Reorder</span>
                 </button>
               </li>
-             
             </ul>
           </div>
 
@@ -246,9 +245,9 @@ export const Footer: React.FC = () => {
             </div>
 
             <div className="pt-2 text-xs text-stone-400 space-y-1">
-              <p className="font-bold text-white">Delivering across Pakistan:</p>
-              <p className="text-[11px] text-stone-500">
-                Karachi (Same Day Express), Lahore, Islamabad, Rawalpindi, Faisalabad, Multan, Hyderabad, Peshawar, Quetta.
+              <p className="font-bold text-white">📍 Delivery Available in Hyderabad Only</p>
+              <p className="text-[11px] text-stone-400">
+                Fast doorstep grocery delivery to Qasimabad, Latifabad, Saddar, Autobahn, Citizen Colony, Kohsar, Gulistan-e-Sajjad, Wadhu Wah, and all areas of Hyderabad, Sindh.
               </p>
             </div>
           </div>
@@ -257,11 +256,9 @@ export const Footer: React.FC = () => {
 
         {/* Copyright & Disclaimer */}
         <div className="border-t border-stone-800 mt-10 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-stone-500">
-          <p>© {new Date().getFullYear()} JUNEJO SUPERSTORE Pakistan. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} JUNEJO SUPERSTORE Hyderabad. All rights reserved.</p>
           <div className="flex items-center gap-4">
-            
-            <span>•</span>
-            <span>Made for Pakistani Families with pride</span>
+            <span>📍 Serving Hyderabad, Sindh, Pakistan</span>
           </div>
         </div>
 

@@ -1,6 +1,6 @@
 {
   "name": "JUNEJO SUPERSTORE",
-  "description": "Modern Pakistani online supermarket offering everyday groceries, household essentials, and customizable Monthly Rashan packages.",
+  "description": "Online supermarket grocery store in Hyderabad, Sindh, Pakistan with monthly rashan packages, everyday essentials, and home delivery.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

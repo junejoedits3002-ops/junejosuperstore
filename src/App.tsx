@@ -29,9 +29,11 @@ const MainContent: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }, [activeView]);
 
+  const isAdmin = activeView === 'admin';
+
   return (
-    <div className="min-h-screen flex flex-col bg-stone-50 font-sans text-stone-900 pb-16 md:pb-0 selection:bg-emerald-200 selection:text-emerald-950">
-      <Navbar />
+    <div className={`min-h-screen flex flex-col font-sans selection:bg-emerald-200 selection:text-emerald-950 ${isAdmin ? 'bg-stone-900 text-stone-100' : 'bg-stone-50 text-stone-900 pb-16 md:pb-0'}`}>
+      {!isAdmin && <Navbar />}
 
       <main className="flex-1">
         {activeView === 'home' && (
@@ -60,12 +62,12 @@ const MainContent: React.FC = () => {
         {activeView === 'admin' && <AdminDashboard />}
       </main>
 
-      <Footer />
+      {!isAdmin && <Footer />}
 
       {/* Global Overlays & Modals */}
       <CartDrawer />
       <ProductDetailModal />
-      <MobileBottomNav />
+      {!isAdmin && <MobileBottomNav />}
     </div>
   );
 };

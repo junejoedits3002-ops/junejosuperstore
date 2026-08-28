@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import React, { createContext, useContext, useEffect, useState, useMemo, useCallback } from 'react';
 import {
   CartItem,
   Category,
@@ -22,6 +22,26 @@ import {
   INITIAL_RASHAN_PACKAGES,
   INITIAL_STORE_SETTINGS,
 } from '../data/initialData';
+import { auth, db } from '../lib/firebase';
+import {
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  signOut,
+  onAuthStateChanged,
+  User,
+} from 'firebase/auth';
+import {
+  collection,
+  doc,
+  onSnapshot,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  writeBatch,
+  getDocs,
+  getDoc,
+  query,
+} from 'firebase/firestore';
 
 interface StoreContextType {
   products: Product[];
@@ -41,6 +61,12 @@ interface StoreContextType {
   searchQuery: string;
   lastCompletedOrder: Order | null;
   
+  // Cloud & Loading State
+  isLoadingFirestore: boolean;
+  isCloudConnected: boolean;
+  firestoreError: string | null;
+  syncCloudSeed: () => Promise<{ success: boolean; message: string }>;
+
   // Navigation & UI Actions
   setIsCartOpen: (open: boolean) => void;
   setSelectedProduct: (product: Product | null) => void;
@@ -66,48 +92,54 @@ interface StoreContextType {
   cartTotal: number;
   
   // Order Actions
-  placeOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date' | 'status' | 'subtotal' | 'deliveryFee' | 'discount' | 'total' | 'items'>) => Order;
-  updateOrderStatus: (orderId: string, status: OrderStatus) => void;
-  deleteOrder: (orderId: string) => void;
+  placeOrder: (orderData: Omit<Order, 'id' | 'orderNumber' | 'date' | 'status' | 'subtotal' | 'deliveryFee' | 'discount' | 'total' | 'items'>) => Promise<Order>;
+  updateOrderStatus: (orderId: string, status: OrderStatus) => Promise<void>;
+  deleteOrder: (orderId: string) => Promise<void>;
   getOrderById: (orderId: string) => Order | undefined;
   getOrdersByPhone: (phone: string) => Order[];
   reorderPastOrder: (order: Order) => void;
 
   // Admin Product Actions
-  addProduct: (product: Omit<Product, 'id'>) => Product;
-  updateProduct: (id: string, updatedFields: Partial<Product>) => void;
-  deleteProduct: (id: string) => void;
-  duplicateProduct: (id: string) => void;
-  toggleProductStatus: (id: string) => void;
-  updateProductStock: (id: string, newStock: number) => void;
-  toggleFeaturedProduct: (id: string) => void;
-  toggleBestSeller: (id: string) => void;
-  toggleNewArrival: (id: string) => void;
-  toggleDeal: (id: string) => void;
+  addProduct: (product: Omit<Product, 'id'>) => Promise<Product>;
+  updateProduct: (id: string, updatedFields: Partial<Product>) => Promise<void>;
+  deleteProduct: (id: string) => Promise<void>;
+  duplicateProduct: (id: string) => Promise<void>;
+  toggleProductStatus: (id: string) => Promise<void>;
+  updateProductStock: (id: string, newStock: number) => Promise<void>;
+  toggleFeaturedProduct: (id: string) => Promise<void>;
+  toggleBestSeller: (id: string) => Promise<void>;
+  toggleNewArrival: (id: string) => Promise<void>;
+  toggleDeal: (id: string) => Promise<void>;
 
   // Admin Category Actions
-  addCategory: (cat: Omit<Category, 'id'>) => Category;
-  updateCategory: (id: string, updatedFields: Partial<Category>) => void;
-  deleteCategory: (id: string) => void;
-  reorderCategory: (id: string, direction: 'up' | 'down') => void;
+  addCategory: (cat: Omit<Category, 'id'>) => Promise<Category>;
+  updateCategory: (id: string, updatedFields: Partial<Category>) => Promise<void>;
+  deleteCategory: (id: string) => Promise<void>;
+  reorderCategory: (id: string, direction: 'up' | 'down') => Promise<void>;
 
   // Admin Rashan Actions
-  addRashanPackage: (pkg: Omit<RashanPackage, 'id'>) => RashanPackage;
-  updateRashanPackage: (id: string, updatedFields: Partial<RashanPackage>) => void;
-  deleteRashanPackage: (id: string) => void;
-  duplicateRashanPackage: (id: string) => void;
+  addRashanPackage: (pkg: Omit<RashanPackage, 'id'>) => Promise<RashanPackage>;
+  updateRashanPackage: (id: string, updatedFields: Partial<RashanPackage>) => Promise<void>;
+  deleteRashanPackage: (id: string) => Promise<void>;
+  duplicateRashanPackage: (id: string) => Promise<void>;
 
   // Admin Homepage & Banner Actions
-  updateHeroConfig: (config: Partial<HeroBannerConfig>) => void;
-  addPromoBanner: (banner: Omit<PromoBanner, 'id'>) => PromoBanner;
-  updatePromoBanner: (id: string, updatedFields: Partial<PromoBanner>) => void;
-  deletePromoBanner: (id: string) => void;
+  updateHeroConfig: (config: Partial<HeroBannerConfig>) => Promise<void>;
+  addPromoBanner: (banner: Omit<PromoBanner, 'id'>) => Promise<PromoBanner>;
+  updatePromoBanner: (id: string, updatedFields: Partial<PromoBanner>) => Promise<void>;
+  deletePromoBanner: (id: string) => Promise<void>;
 
   // Store Settings & Data
-  updateStoreSettings: (newSettings: Partial<StoreSettings>) => void;
-  resetToDefaults: () => void;
+  updateStoreSettings: (newSettings: Partial<StoreSettings>) => Promise<void>;
+  resetToDefaults: () => Promise<void>;
   exportDataJSON: () => string;
-  importDataJSON: (jsonString: string) => { success: boolean; message: string };
+  importDataJSON: (jsonString: string) => Promise<{ success: boolean; message: string }>;
+
+  // Admin Authentication
+  isAdminAuthenticated: boolean;
+  adminUser: User | null;
+  adminLogin: (emailOrPasskey: string, password?: string) => Promise<{ success: boolean; message?: string }>;
+  adminLogout: () => Promise<void>;
 
   // WhatsApp Helpers
   generateWhatsAppOrderUrl: (orderOrCustomItems?: { items: CartItem[]; total: number; name?: string; address?: string; phone?: string }) => string;
@@ -117,265 +149,409 @@ interface StoreContextType {
 
 const StoreContext = createContext<StoreContextType | undefined>(undefined);
 
-const STORAGE_KEYS = {
-  PRODUCTS: 'JUNEJO_products_v2',
-  CATEGORIES: 'JUNEJO_categories_v2',
-  PACKAGES: 'JUNEJO_rashan_packages_v2',
-  SETTINGS: 'JUNEJO_settings_v2',
-  HERO: 'JUNEJO_hero_config_v2',
-  BANNERS: 'JUNEJO_banners_v2',
-  CART: 'JUNEJO_cart_v2',
-  COUPON: 'JUNEJO_coupon_v2',
-  ORDERS: 'JUNEJO_orders_v2',
+const LOCAL_STORAGE_KEYS = {
+  CART: 'junejo_cart_v2',
+  COUPON: 'junejo_coupon_v2',
 };
 
+const INITIAL_DEMO_ORDERS: Order[] = [
+  {
+    id: 'ord-1740640000000',
+    orderNumber: 'JS-84920',
+    date: '2026-02-27T10:30:00.000Z',
+    customerName: 'Muhammad Bilal Khan',
+    phone: '03009876543',
+    whatsappNumber: '03009876543',
+    address: 'House 42-B, Street 7, Autobahn Road',
+    area: 'Latifabad Unit 7',
+    city: 'Hyderabad',
+    deliveryNotes: 'Please ring bell and leave with security if unavailable.',
+    paymentMethod: 'Cash on Delivery',
+    items: [
+      {
+        cartItemId: 'c-1',
+        type: 'rashan_package',
+        packageId: 'pkg-basic',
+        name: 'Basic Monthly Rashan Package',
+        price: 8950,
+        quantity: 1,
+        weight: '2-4 Persons (12 Essentials)',
+        image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
+      },
+      {
+        cartItemId: 'c-2',
+        type: 'product',
+        productId: 'prod-tea-1',
+        name: 'Tapal Danedar Black Tea 900g Pouch',
+        brand: 'Tapal',
+        price: 1080,
+        quantity: 1,
+        weight: '900g',
+        image: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
+      },
+    ],
+    subtotal: 10030,
+    deliveryFee: 0,
+    discount: 0,
+    total: 10030,
+    status: 'Delivered',
+  },
+  {
+    id: 'ord-1740650000000',
+    orderNumber: 'JS-91204',
+    date: '2026-02-28T09:15:00.000Z',
+    customerName: 'Syed Tariq Shah',
+    phone: '03123456789',
+    whatsappNumber: '03123456789',
+    address: 'Flat 304, Al-Madina Heights, Saddar',
+    area: 'Saddar / Cantt',
+    city: 'Hyderabad',
+    deliveryNotes: 'Call upon arrival at the gate.',
+    paymentMethod: 'EasyPaisa',
+    items: [
+      {
+        cartItemId: 'c-3',
+        type: 'product',
+        productId: 'prod-atta-1',
+        name: 'Sunridge Chakki Atta 10kg Bag',
+        brand: 'Sunridge',
+        price: 1450,
+        quantity: 2,
+        weight: '10kg',
+        image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
+      },
+      {
+        cartItemId: 'c-4',
+        type: 'product',
+        productId: 'prod-oil-1',
+        name: 'Dalda Cooking Oil 5L Tin',
+        brand: 'Dalda',
+        price: 2750,
+        quantity: 2,
+        weight: '5L',
+        image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80',
+      },
+    ],
+    subtotal: 8400,
+    deliveryFee: 0,
+    discount: 0,
+    total: 8400,
+    status: 'Confirmed',
+  },
+];
+
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  // 1. PRODUCTS
-  const [products, setProducts] = useState<Product[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PRODUCTS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-      return INITIAL_PRODUCTS;
-    } catch {
-      return INITIAL_PRODUCTS;
-    }
-  });
+  // Store Core State (Synced in Real-time from Cloud Firestore)
+  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
+  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
+  const [rashanPackages, setRashanPackages] = useState<RashanPackage[]>(INITIAL_RASHAN_PACKAGES);
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(INITIAL_STORE_SETTINGS);
+  const [heroConfig, setHeroConfig] = useState<HeroBannerConfig>(INITIAL_HERO_CONFIG);
+  const [promoBanners, setPromoBanners] = useState<PromoBanner[]>(INITIAL_PROMO_BANNERS);
+  const [orders, setOrders] = useState<Order[]>(INITIAL_DEMO_ORDERS);
+  const [customers, setCustomers] = useState<CustomerRecord[]>([]);
 
-  // 2. CATEGORIES
-  const [categories, setCategories] = useState<Category[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CATEGORIES);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-      return INITIAL_CATEGORIES;
-    } catch {
-      return INITIAL_CATEGORIES;
-    }
-  });
+  // Cloud & Loading State
+  const [isLoadingFirestore, setIsLoadingFirestore] = useState(true);
+  const [isCloudConnected, setIsCloudConnected] = useState(false);
+  const [firestoreError, setFirestoreError] = useState<string | null>(null);
 
-  // 3. RASHAN PACKAGES
-  const [rashanPackages, setRashanPackages] = useState<RashanPackage[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.PACKAGES);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-      return INITIAL_RASHAN_PACKAGES;
-    } catch {
-      return INITIAL_RASHAN_PACKAGES;
-    }
-  });
-
-  // 4. STORE SETTINGS
-  const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.SETTINGS);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        return {
-          ...INITIAL_STORE_SETTINGS,
-          ...parsed,
-          city: 'Hyderabad, Sindh, Pakistan',
-          freeDeliveryThreshold: parsed.freeDeliveryThreshold ?? 8000,
-          deliveryFee: parsed.deliveryFee ?? 200,
-          announcement: parsed.announcement || '🚚 FREE DELIVERY ON ORDERS RS. 8,000+ | 📍 DELIVERY AVAILABLE IN HYDERABAD ONLY',
-        };
-      }
-      return INITIAL_STORE_SETTINGS;
-    } catch {
-      return INITIAL_STORE_SETTINGS;
-    }
-  });
-
-  // 5. HERO CONFIG
-  const [heroConfig, setHeroConfig] = useState<HeroBannerConfig>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.HERO);
-      if (saved) return JSON.parse(saved);
-      return INITIAL_HERO_CONFIG;
-    } catch {
-      return INITIAL_HERO_CONFIG;
-    }
-  });
-
-  // 6. PROMO BANNERS
-  const [promoBanners, setPromoBanners] = useState<PromoBanner[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.BANNERS);
-      if (saved) return JSON.parse(saved);
-      return INITIAL_PROMO_BANNERS;
-    } catch {
-      return INITIAL_PROMO_BANNERS;
-    }
-  });
-
-  // 7. CART
+  // Client-Side Navigation & Transient Cart State
   const [cart, setCart] = useState<CartItem[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.CART);
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.CART);
       return saved ? JSON.parse(saved) : [];
     } catch {
       return [];
     }
   });
 
-  // 8. COUPON
   const [appliedCoupon, setAppliedCoupon] = useState<Coupon | null>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEYS.COUPON);
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEYS.COUPON);
       return saved ? JSON.parse(saved) : null;
     } catch {
       return null;
     }
   });
 
-  // 9. ORDERS
-  const [orders, setOrders] = useState<Order[]>(() => {
-    try {
-      const saved = localStorage.getItem(STORAGE_KEYS.ORDERS);
-      if (saved) return JSON.parse(saved);
-      return [
-        {
-          id: 'ord-1001',
-          orderNumber: 'JS-84920',
-          date: new Date(Date.now() - 86400000 * 2).toISOString(),
-          customerName: 'Muhammad Bilal Khan',
-          phone: '03009876543',
-          whatsappNumber: '03009876543',
-          address: 'House 42-B, Street 7, Autobahn Road',
-          area: 'Latifabad Unit 7',
-          city: 'Hyderabad, Sindh',
-          deliveryNotes: 'Please ring bell twice, call upon arrival',
-          paymentMethod: 'Cash on Delivery',
-          items: [
-            {
-              cartItemId: 'c-past-1',
-              type: 'rashan_package',
-              name: 'Basic Rashan Package',
-              price: 8950,
-              quantity: 1,
-              image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
-            },
-            {
-              cartItemId: 'c-past-2',
-              type: 'product',
-              productId: 'prod-tea-1',
-              name: 'Tapal Danedar Black Tea 900g Economy Pack',
-              brand: 'Tapal',
-              price: 1580,
-              quantity: 1,
-              weight: '900 g',
-              image: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
-            }
-          ],
-          subtotal: 10530,
-          deliveryFee: 0,
-          discount: 500,
-          total: 10030,
-          couponCode: 'RASHAN500',
-          status: 'Delivered',
-        },
-        {
-          id: 'ord-1002',
-          orderNumber: 'JS-91204',
-          date: new Date(Date.now() - 86400000 * 0.5).toISOString(),
-          customerName: 'Syed Tariq Shah',
-          phone: '03123456789',
-          whatsappNumber: '03123456789',
-          address: 'Flat 304, Al-Madina Heights, Saddar',
-          area: 'Saddar / Cantt Hyderabad',
-          city: 'Hyderabad, Sindh',
-          deliveryNotes: 'Deliver between 4 PM to 7 PM',
-          paymentMethod: 'EasyPaisa',
-          items: [
-            {
-              cartItemId: 'c-past-3',
-              type: 'product',
-              productId: 'prod-atta-1',
-              name: 'Sunridge Whole Wheat Chakki Atta 10kg',
-              brand: 'Sunridge',
-              price: 1450,
-              quantity: 2,
-              weight: '10 kg',
-              image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
-            },
-            {
-              cartItemId: 'c-past-4',
-              type: 'product',
-              productId: 'prod-oil-1',
-              name: 'Dalda Cooking Oil 5 Litre Tin',
-              brand: 'Dalda',
-              price: 2750,
-              quantity: 2,
-              weight: '5 Litres',
-              image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80',
-            }
-          ],
-          subtotal: 8400,
-          deliveryFee: 0,
-          discount: 0,
-          total: 8400,
-          status: 'Confirmed',
-        }
-      ];
-    } catch {
-      return [];
-    }
-  });
-
-  // UI Navigation states
   const [isCartOpen, setIsCartOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
-  const [activeView, setActiveView] = useState<'home' | 'shop' | 'categories' | 'rashan' | 'rashan-builder' | 'deals' | 'checkout' | 'order-success' | 'reorder' | 'admin'>('home');
+  const [activeViewState, setActiveViewState] = useState<'home' | 'shop' | 'categories' | 'rashan' | 'rashan-builder' | 'deals' | 'checkout' | 'order-success' | 'reorder' | 'admin'>('home');
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [lastCompletedOrder, setLastCompletedOrder] = useState<Order | null>(null);
 
-  // Sync to LocalStorage
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PRODUCTS, JSON.stringify(products));
-  }, [products]);
+  // Admin Authentication State via Firebase Auth
+  const [adminUser, setAdminUser] = useState<User | null>(null);
+  const [isAdminAuthenticated, setIsAdminAuthenticated] = useState<boolean>(false);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CATEGORIES, JSON.stringify(categories));
-  }, [categories]);
+  // Synchronize active view with URL pathname and history
+  const setActiveView = useCallback((view: 'home' | 'shop' | 'categories' | 'rashan' | 'rashan-builder' | 'deals' | 'checkout' | 'order-success' | 'reorder' | 'admin') => {
+    setActiveViewState(view);
+    if (typeof window !== 'undefined') {
+      if (view === 'admin') {
+        if (window.location.pathname !== '/admin') {
+          window.history.pushState({ view: 'admin' }, '', '/admin');
+        }
+      } else {
+        if (window.location.pathname === '/admin' || window.location.pathname.startsWith('/admin/')) {
+          window.history.pushState({ view }, '', '/');
+        }
+      }
+    }
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.PACKAGES, JSON.stringify(rashanPackages));
-  }, [rashanPackages]);
+  const activeView = activeViewState;
 
+  // Save Cart & Coupon locally for active browser session
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(storeSettings));
-  }, [storeSettings]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.HERO, JSON.stringify(heroConfig));
-  }, [heroConfig]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.BANNERS, JSON.stringify(promoBanners));
-  }, [promoBanners]);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.CART, JSON.stringify(cart));
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.CART, JSON.stringify(cart));
+    } catch {}
   }, [cart]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.COUPON, JSON.stringify(appliedCoupon));
+    try {
+      localStorage.setItem(LOCAL_STORAGE_KEYS.COUPON, JSON.stringify(appliedCoupon));
+    } catch {}
   }, [appliedCoupon]);
 
+  // Listen to Firebase Auth state
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEYS.ORDERS, JSON.stringify(orders));
-  }, [orders]);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      setAdminUser(user);
+      if (user) {
+        setIsAdminAuthenticated(true);
+        // Register or refresh admin record in Firestore
+        try {
+          await setDoc(doc(db, 'admins', user.uid), {
+            uid: user.uid,
+            email: user.email,
+            lastLogin: new Date().toISOString(),
+            role: 'admin',
+          }, { merge: true });
+        } catch {
+          // Non-blocking
+        }
+      } else {
+        setIsAdminAuthenticated(false);
+      }
+    });
 
-  // Derived Customers List from Orders
-  const customers = useMemo<CustomerRecord[]>(() => {
+    return () => unsubscribe();
+  }, []);
+
+  // Check URL pathname / hash on load and back/forward navigation
+  useEffect(() => {
+    const handleUrlChange = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path === '/admin' || path.startsWith('/admin/') || hash === '#admin' || hash === '#/admin' || hash.startsWith('#admin') || hash.startsWith('#/admin')) {
+        setActiveViewState('admin');
+      } else if (path === '/' || path === '') {
+        setActiveViewState((prev) => (prev === 'admin' ? 'home' : prev));
+      }
+    };
+
+    handleUrlChange();
+    window.addEventListener('popstate', handleUrlChange);
+    window.addEventListener('hashchange', handleUrlChange);
+    return () => {
+      window.removeEventListener('popstate', handleUrlChange);
+      window.removeEventListener('hashchange', handleUrlChange);
+    };
+  }, []);
+
+  // Safe Cloud Database Seeding
+  const syncCloudSeed = useCallback(async (): Promise<{ success: boolean; message: string }> => {
+    try {
+      const batch = writeBatch(db);
+
+      // 1. Seed Products
+      INITIAL_PRODUCTS.forEach((p) => {
+        const ref = doc(db, 'products', p.id);
+        batch.set(ref, p, { merge: true });
+      });
+
+      // 2. Seed Categories
+      INITIAL_CATEGORIES.forEach((c) => {
+        const ref = doc(db, 'categories', c.id);
+        batch.set(ref, c, { merge: true });
+      });
+
+      // 3. Seed Rashan Packages
+      INITIAL_RASHAN_PACKAGES.forEach((pkg) => {
+        const ref = doc(db, 'rashanPackages', pkg.id);
+        batch.set(ref, pkg, { merge: true });
+      });
+
+      // 4. Seed Store Settings
+      const settingsRef = doc(db, 'storeSettings', 'main');
+      batch.set(settingsRef, INITIAL_STORE_SETTINGS, { merge: true });
+
+      // 5. Seed Homepage Hero
+      const heroRef = doc(db, 'homepage', 'hero');
+      batch.set(heroRef, INITIAL_HERO_CONFIG, { merge: true });
+
+      // 6. Seed Promo Banners
+      INITIAL_PROMO_BANNERS.forEach((b) => {
+        const ref = doc(db, 'promoBanners', b.id);
+        batch.set(ref, b, { merge: true });
+      });
+
+      // 7. Seed Initial Demo Orders
+      INITIAL_DEMO_ORDERS.forEach((ord) => {
+        const ref = doc(db, 'orders', ord.id);
+        batch.set(ref, ord, { merge: true });
+      });
+
+      await batch.commit();
+      setIsCloudConnected(true);
+      return { success: true, message: 'All 42 products, categories, rashan packages, and settings seeded to Cloud Firestore successfully!' };
+    } catch (err: any) {
+      console.error('Error seeding Firestore:', err);
+      return { success: false, message: err?.message || 'Failed to seed cloud database.' };
+    }
+  }, []);
+
+  // Real-time Firestore Listeners (Live subscriptions)
+  useEffect(() => {
+    let unsubs: (() => void)[] = [];
+    let isInitialLoad = true;
+
+    try {
+      // 1. PRODUCTS Listener
+      const unsubProducts = onSnapshot(
+        collection(db, 'products'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((docSnap) => docSnap.data() as Product);
+            setProducts(list);
+            setIsCloudConnected(true);
+            setFirestoreError(null);
+          } else if (isInitialLoad) {
+            // Auto-seed if products collection is empty
+            syncCloudSeed();
+          }
+          setIsLoadingFirestore(false);
+        },
+        (error) => {
+          console.warn('Firestore products listener error:', error);
+          setFirestoreError(error.message);
+          setIsLoadingFirestore(false);
+        }
+      );
+      unsubs.push(unsubProducts);
+
+      // 2. CATEGORIES Listener
+      const unsubCategories = onSnapshot(
+        collection(db, 'categories'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((docSnap) => docSnap.data() as Category);
+            list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+            setCategories(list);
+          }
+        },
+        (err) => console.warn('Firestore categories listener error:', err)
+      );
+      unsubs.push(unsubCategories);
+
+      // 3. RASHAN PACKAGES Listener
+      const unsubPackages = onSnapshot(
+        collection(db, 'rashanPackages'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((docSnap) => docSnap.data() as RashanPackage);
+            setRashanPackages(list);
+          }
+        },
+        (err) => console.warn('Firestore packages listener error:', err)
+      );
+      unsubs.push(unsubPackages);
+
+      // 4. STORE SETTINGS Listener
+      const unsubSettings = onSnapshot(
+        doc(db, 'storeSettings', 'main'),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            setStoreSettings(docSnap.data() as StoreSettings);
+          }
+        },
+        (err) => console.warn('Firestore settings listener error:', err)
+      );
+      unsubs.push(unsubSettings);
+
+      // 5. HOMEPAGE HERO Listener
+      const unsubHero = onSnapshot(
+        doc(db, 'homepage', 'hero'),
+        (docSnap) => {
+          if (docSnap.exists()) {
+            setHeroConfig(docSnap.data() as HeroBannerConfig);
+          }
+        },
+        (err) => console.warn('Firestore hero listener error:', err)
+      );
+      unsubs.push(unsubHero);
+
+      // 6. PROMO BANNERS Listener
+      const unsubBanners = onSnapshot(
+        collection(db, 'promoBanners'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((docSnap) => docSnap.data() as PromoBanner);
+            setPromoBanners(list);
+          }
+        },
+        (err) => console.warn('Firestore banners listener error:', err)
+      );
+      unsubs.push(unsubBanners);
+
+      // 7. ORDERS Listener
+      const unsubOrders = onSnapshot(
+        collection(db, 'orders'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((docSnap) => docSnap.data() as Order);
+            list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+            setOrders(list);
+          }
+        },
+        (err) => console.warn('Firestore orders listener error:', err)
+      );
+      unsubs.push(unsubOrders);
+
+      // 8. CUSTOMERS Listener
+      const unsubCustomers = onSnapshot(
+        collection(db, 'customers'),
+        (snapshot) => {
+          if (!snapshot.empty) {
+            const list = snapshot.docs.map((docSnap) => docSnap.data() as CustomerRecord);
+            list.sort((a, b) => b.totalSpent - a.totalSpent);
+            setCustomers(list);
+          }
+        },
+        (err) => console.warn('Firestore customers listener error:', err)
+      );
+      unsubs.push(unsubCustomers);
+
+    } catch (err: any) {
+      console.error('Failed to initialize Firestore listeners:', err);
+      setIsLoadingFirestore(false);
+      setFirestoreError(err?.message || 'Firestore connection initialization failed.');
+    }
+
+    isInitialLoad = false;
+
+    return () => {
+      unsubs.forEach((unsub) => unsub());
+    };
+  }, [syncCloudSeed]);
+
+  // Aggregated Customers calculation fallback
+  const derivedCustomers = useMemo<CustomerRecord[]>(() => {
+    if (customers.length > 0) return customers;
     const map = new Map<string, CustomerRecord>();
     orders.forEach((ord) => {
       const key = ord.phone ? ord.phone.trim() : ord.customerName.trim();
@@ -408,7 +584,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     });
     return Array.from(map.values()).sort((a, b) => b.totalSpent - a.totalSpent);
-  }, [orders]);
+  }, [customers, orders]);
 
   // Cart Calculations
   const cartCount = useMemo(() => {
@@ -438,6 +614,76 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (cartSubtotal === 0) return 0;
     return Math.max(0, cartSubtotal + deliveryFee - couponDiscount);
   }, [cartSubtotal, deliveryFee, couponDiscount]);
+
+  // Firebase Admin Authentication
+  const adminLogin = async (emailOrPasskey: string, password?: string): Promise<{ success: boolean; message?: string }> => {
+    const emailToUse = password !== undefined ? emailOrPasskey.trim() : 'admin@junejosuperstore.pk';
+    const passwordToUse = password !== undefined ? password.trim() : emailOrPasskey.trim();
+
+    if (!emailToUse || !passwordToUse) {
+      return {
+        success: false,
+        message: 'Please enter both your admin email and password.',
+      };
+    }
+
+    try {
+      // 1. Try Signing in with Firebase Auth
+      const userCredential = await signInWithEmailAndPassword(auth, emailToUse, passwordToUse);
+      setAdminUser(userCredential.user);
+      setIsAdminAuthenticated(true);
+      return { success: true };
+    } catch (err: any) {
+      // 2. If user not found, auto-create store manager account on first setup
+      if (err.code === 'auth/user-not-found' || err.code === 'auth/invalid-credential') {
+        try {
+          const newCredential = await createUserWithEmailAndPassword(auth, emailToUse, passwordToUse);
+          setAdminUser(newCredential.user);
+          setIsAdminAuthenticated(true);
+
+          await setDoc(doc(db, 'admins', newCredential.user.uid), {
+            uid: newCredential.user.uid,
+            email: emailToUse,
+            role: 'admin',
+            createdAt: new Date().toISOString(),
+          }, { merge: true });
+
+          return { success: true };
+        } catch (createErr: any) {
+          // If creation fails due to email already in use, verify credentials
+          if (createErr.code === 'auth/email-already-in-use') {
+            return {
+              success: false,
+              message: 'Invalid password. Please enter the correct password for this admin account.',
+            };
+          }
+          return {
+            success: false,
+            message: createErr.message || 'Firebase Authentication failed.',
+          };
+        }
+      }
+
+      return {
+        success: false,
+        message: err.message || 'Authentication failed. Please verify admin credentials.',
+      };
+    }
+  };
+
+  const adminLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (err) {
+      console.warn('Firebase signOut error:', err);
+    }
+    setAdminUser(null);
+    setIsAdminAuthenticated(false);
+    // Keep on admin route so the login screen is immediately displayed
+    if (typeof window !== 'undefined' && window.location.pathname !== '/admin') {
+      window.history.replaceState({ view: 'admin' }, '', '/admin');
+    }
+  };
 
   // Cart Operations
   const addToCart = (product: Product, quantity = 1) => {
@@ -545,14 +791,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setAppliedCoupon(null);
   };
 
-  // Orders and Inventory auto-decrement
-  const placeOrder = (
+  // Orders and Cloud Persistence
+  const placeOrder = async (
     orderData: Omit<Order, 'id' | 'orderNumber' | 'date' | 'status' | 'subtotal' | 'deliveryFee' | 'discount' | 'total' | 'items'>
-  ): Order => {
+  ): Promise<Order> => {
     const randomSuffix = Math.floor(10000 + Math.random() * 90000);
+    const newOrderId = `ord-${Date.now()}`;
     const newOrder: Order = {
       ...orderData,
-      id: `ord-${Date.now()}`,
+      id: newOrderId,
       orderNumber: `JS-${randomSuffix}`,
       date: new Date().toISOString(),
       items: [...cart],
@@ -564,22 +811,69 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       status: 'Pending',
     };
 
-    // Auto-decrease stock for products ordered
-    setProducts((prevProducts) => {
-      return prevProducts.map((p) => {
-        const itemInCart = cart.find((c) => c.productId === p.id);
-        if (itemInCart) {
-          const newStock = Math.max(0, (p.stockCount ?? 0) - itemInCart.quantity);
-          return {
-            ...p,
-            stockCount: newStock,
-            inStock: newStock > 0,
-            status: newStock > 0 ? (p.status === 'Draft' ? 'Draft' : 'Active') : 'Out of Stock',
-          };
+    // 1. Write Order to Firestore
+    try {
+      await setDoc(doc(db, 'orders', newOrder.id), newOrder);
+    } catch (err) {
+      console.warn('Direct Firestore order write failed, keeping in local state:', err);
+    }
+
+    // 2. Upsert Customer Record in Firestore
+    try {
+      const custId = `cust-${orderData.phone.replace(/\D/g, '') || Math.random().toString(36).substring(2, 7)}`;
+      const customerDocRef = doc(db, 'customers', custId);
+      const existingCust = await getDoc(customerDocRef);
+      if (existingCust.exists()) {
+        const data = existingCust.data() as CustomerRecord;
+        await setDoc(customerDocRef, {
+          name: orderData.customerName,
+          phone: orderData.phone,
+          whatsappNumber: orderData.whatsappNumber || orderData.phone,
+          address: orderData.address,
+          area: orderData.area,
+          city: orderData.city,
+          ordersCount: (data.ordersCount || 1) + 1,
+          totalSpent: (data.totalSpent || 0) + cartTotal,
+          lastOrderDate: new Date().toISOString(),
+          lastOrderId: newOrder.orderNumber,
+        }, { merge: true });
+      } else {
+        await setDoc(customerDocRef, {
+          id: custId,
+          name: orderData.customerName,
+          phone: orderData.phone,
+          whatsappNumber: orderData.whatsappNumber || orderData.phone,
+          address: orderData.address,
+          area: orderData.area,
+          city: orderData.city,
+          ordersCount: 1,
+          totalSpent: cartTotal,
+          lastOrderDate: new Date().toISOString(),
+          lastOrderId: newOrder.orderNumber,
+        });
+      }
+    } catch (custErr) {
+      console.warn('Customer upsert error:', custErr);
+    }
+
+    // 3. Decrement Product Stock in Firestore
+    try {
+      for (const cartItem of cart) {
+        if (cartItem.productId) {
+          const p = products.find((prod) => prod.id === cartItem.productId);
+          if (p) {
+            const newStock = Math.max(0, (p.stockCount ?? 0) - cartItem.quantity);
+            await updateDoc(doc(db, 'products', p.id), {
+              stockCount: newStock,
+              inStock: newStock > 0,
+              status: newStock > 0 ? (p.status === 'Draft' ? 'Draft' : 'Active') : 'Out of Stock',
+            });
+          }
         }
-        return p;
-      });
-    });
+      }
+    } catch (stockErr) {
+      console.warn('Stock update error:', stockErr);
+    }
 
     setOrders((prev) => [newOrder, ...prev]);
     setLastCompletedOrder(newOrder);
@@ -588,13 +882,21 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return newOrder;
   };
 
-  const updateOrderStatus = (orderId: string, status: OrderStatus) => {
-    setOrders((prev) =>
-      prev.map((ord) => (ord.id === orderId ? { ...ord, status } : ord))
-    );
+  const updateOrderStatus = async (orderId: string, status: OrderStatus) => {
+    try {
+      await updateDoc(doc(db, 'orders', orderId), { status });
+    } catch (err) {
+      console.warn('Firestore updateOrderStatus error:', err);
+    }
+    setOrders((prev) => prev.map((ord) => (ord.id === orderId ? { ...ord, status } : ord)));
   };
 
-  const deleteOrder = (orderId: string) => {
+  const deleteOrder = async (orderId: string) => {
+    try {
+      await deleteDoc(doc(db, 'orders', orderId));
+    } catch (err) {
+      console.warn('Firestore deleteOrder error:', err);
+    }
     setOrders((prev) => prev.filter((ord) => ord.id !== orderId));
   };
 
@@ -617,8 +919,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setIsCartOpen(true);
   };
 
-  // Product Actions
-  const addProduct = (newProduct: Omit<Product, 'id'>): Product => {
+  // Product Actions in Firestore
+  const addProduct = async (newProduct: Omit<Product, 'id'>): Promise<Product> => {
     const calculatedDiscount =
       newProduct.originalPrice && newProduct.originalPrice > newProduct.price
         ? Math.round(((newProduct.originalPrice - newProduct.price) / newProduct.originalPrice) * 100)
@@ -631,47 +933,61 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       discountPercentage: calculatedDiscount,
       status: newProduct.status || (newProduct.stockCount > 0 ? 'Active' : 'Out of Stock'),
     };
+
+    try {
+      await setDoc(doc(db, 'products', product.id), product);
+    } catch (err) {
+      console.error('Firestore addProduct error:', err);
+    }
+
     setProducts((prev) => [product, ...prev]);
     return product;
   };
 
-  const updateProduct = (id: string, updatedFields: Partial<Product>) => {
+  const updateProduct = async (id: string, updatedFields: Partial<Product>) => {
+    let finalMerged: Partial<Product> = { ...updatedFields };
+
+    if (updatedFields.price !== undefined || updatedFields.originalPrice !== undefined) {
+      const existing = products.find((p) => p.id === id);
+      const original = updatedFields.originalPrice ?? existing?.originalPrice ?? 0;
+      const current = updatedFields.price ?? existing?.price ?? 0;
+      if (original > current && original > 0) {
+        finalMerged.discountPercentage = Math.round(((original - current) / original) * 100);
+      } else {
+        finalMerged.discountPercentage = 0;
+      }
+    }
+
+    if (updatedFields.stockCount !== undefined) {
+      finalMerged.inStock = updatedFields.stockCount > 0;
+      if (updatedFields.stockCount === 0) {
+        finalMerged.status = 'Out of Stock';
+      } else {
+        finalMerged.status = 'Active';
+      }
+    }
+
+    try {
+      await updateDoc(doc(db, 'products', id), finalMerged);
+    } catch (err) {
+      console.error('Firestore updateProduct error:', err);
+    }
+
     setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p;
-        const merged = { ...p, ...updatedFields };
-        if (updatedFields.price !== undefined || updatedFields.originalPrice !== undefined) {
-          const original = merged.originalPrice || 0;
-          const current = merged.price;
-          if (original > current) {
-            merged.discountPercentage = Math.round(((original - current) / original) * 100);
-          } else {
-            merged.discountPercentage = 0;
-          }
-        }
-        if (updatedFields.stockCount !== undefined) {
-          merged.inStock = merged.stockCount > 0;
-          if (merged.stockCount === 0 && merged.status !== 'Draft') {
-            merged.status = 'Out of Stock';
-          } else if (merged.stockCount > 0 && merged.status === 'Out of Stock') {
-            merged.status = 'Active';
-          }
-        }
-        return merged;
-      })
+      prev.map((p) => (p.id === id ? { ...p, ...finalMerged } : p))
     );
 
-    // If product is in cart, update its price/image/name in active cart
+    // Update active cart if affected
     setCart((prevCart) =>
       prevCart.map((item) => {
         if (item.productId === id) {
           return {
             ...item,
-            name: updatedFields.name ?? item.name,
-            price: updatedFields.price ?? item.price,
-            image: updatedFields.image ?? item.image,
-            weight: updatedFields.weight ?? item.weight,
-            brand: updatedFields.brand ?? item.brand,
+            name: finalMerged.name ?? item.name,
+            price: finalMerged.price ?? item.price,
+            image: finalMerged.image ?? item.image,
+            weight: finalMerged.weight ?? item.weight,
+            brand: finalMerged.brand ?? item.brand,
           };
         }
         return item;
@@ -679,12 +995,17 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   };
 
-  const deleteProduct = (id: string) => {
+  const deleteProduct = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'products', id));
+    } catch (err) {
+      console.error('Firestore deleteProduct error:', err);
+    }
     setProducts((prev) => prev.filter((p) => p.id !== id));
     setCart((prev) => prev.filter((c) => c.productId !== id));
   };
 
-  const duplicateProduct = (id: string) => {
+  const duplicateProduct = async (id: string) => {
     const existing = products.find((p) => p.id === id);
     if (!existing) return;
     const duplicated: Product = {
@@ -693,110 +1014,150 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       name: `${existing.name} (Copy)`,
       sku: existing.sku ? `${existing.sku}-COPY` : undefined,
     };
+    try {
+      await setDoc(doc(db, 'products', duplicated.id), duplicated);
+    } catch (err) {
+      console.error('Firestore duplicateProduct error:', err);
+    }
     setProducts((prev) => [duplicated, ...prev]);
   };
 
-  const toggleProductStatus = (id: string) => {
-    setProducts((prev) =>
-      prev.map((p) => {
-        if (p.id !== id) return p;
-        const nextStatus = p.status === 'Active' ? 'Draft' : 'Active';
-        return {
-          ...p,
-          status: nextStatus,
-          inStock: nextStatus === 'Active' ? p.stockCount > 0 : false,
-        };
-      })
-    );
+  const toggleProductStatus = async (id: string) => {
+    const p = products.find((prod) => prod.id === id);
+    if (!p) return;
+    const nextStatus = p.status === 'Active' ? 'Draft' : 'Active';
+    const inStock = nextStatus === 'Active' ? (p.stockCount ?? 0) > 0 : false;
+    await updateProduct(id, { status: nextStatus, inStock });
   };
 
-  const updateProductStock = (id: string, newStock: number) => {
-    updateProduct(id, { stockCount: Math.max(0, newStock) });
+  const updateProductStock = async (id: string, newStock: number) => {
+    await updateProduct(id, { stockCount: Math.max(0, newStock) });
   };
 
-  const toggleFeaturedProduct = (id: string) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, featured: !p.featured } : p))
-    );
+  const toggleFeaturedProduct = async (id: string) => {
+    const p = products.find((prod) => prod.id === id);
+    if (!p) return;
+    await updateProduct(id, { featured: !p.featured });
   };
 
-  const toggleBestSeller = (id: string) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isBestSeller: !p.isBestSeller } : p))
-    );
+  const toggleBestSeller = async (id: string) => {
+    const p = products.find((prod) => prod.id === id);
+    if (!p) return;
+    await updateProduct(id, { isBestSeller: !p.isBestSeller });
   };
 
-  const toggleNewArrival = (id: string) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isNewArrival: !p.isNewArrival } : p))
-    );
+  const toggleNewArrival = async (id: string) => {
+    const p = products.find((prod) => prod.id === id);
+    if (!p) return;
+    await updateProduct(id, { isNewArrival: !p.isNewArrival });
   };
 
-  const toggleDeal = (id: string) => {
-    setProducts((prev) =>
-      prev.map((p) => (p.id === id ? { ...p, isDeal: !p.isDeal } : p))
-    );
+  const toggleDeal = async (id: string) => {
+    const p = products.find((prod) => prod.id === id);
+    if (!p) return;
+    await updateProduct(id, { isDeal: !p.isDeal });
   };
 
-  // Category Actions
-  const addCategory = (newCat: Omit<Category, 'id'>): Category => {
+  // Category Actions in Firestore
+  const addCategory = async (newCat: Omit<Category, 'id'>): Promise<Category> => {
     const slug = newCat.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
     const category: Category = {
       ...newCat,
       id: `cat-${Date.now()}`,
       slug: newCat.slug || slug,
       itemCount: 0,
+      order: categories.length + 1,
     };
+    try {
+      await setDoc(doc(db, 'categories', category.id), category);
+    } catch (err) {
+      console.error('Firestore addCategory error:', err);
+    }
     setCategories((prev) => [...prev, category]);
     return category;
   };
 
-  const updateCategory = (id: string, updatedFields: Partial<Category>) => {
+  const updateCategory = async (id: string, updatedFields: Partial<Category>) => {
+    try {
+      await updateDoc(doc(db, 'categories', id), updatedFields);
+    } catch (err) {
+      console.error('Firestore updateCategory error:', err);
+    }
     setCategories((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c))
     );
   };
 
-  const deleteCategory = (id: string) => {
-    const target = categories.find((c) => c.id === id);
-    if (!target) return;
+  const deleteCategory = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'categories', id));
+    } catch (err) {
+      console.error('Firestore deleteCategory error:', err);
+    }
     setCategories((prev) => prev.filter((c) => c.id !== id));
   };
 
-  const reorderCategory = (id: string, direction: 'up' | 'down') => {
-    setCategories((prev) => {
-      const index = prev.findIndex((c) => c.id === id);
-      if (index === -1) return prev;
-      const targetIndex = direction === 'up' ? index - 1 : index + 1;
-      if (targetIndex < 0 || targetIndex >= prev.length) return prev;
-      const copy = [...prev];
-      const [moved] = copy.splice(index, 1);
-      copy.splice(targetIndex, 0, moved);
-      return copy;
-    });
+  const reorderCategory = async (id: string, direction: 'up' | 'down') => {
+    const index = categories.findIndex((c) => c.id === id);
+    if (index === -1) return;
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    if (targetIndex < 0 || targetIndex >= categories.length) return;
+    
+    const updated = [...categories];
+    const [moved] = updated.splice(index, 1);
+    updated.splice(targetIndex, 0, moved);
+
+    // Save orders to Firestore
+    try {
+      const batch = writeBatch(db);
+      updated.forEach((cat, idx) => {
+        cat.order = idx + 1;
+        batch.update(doc(db, 'categories', cat.id), { order: idx + 1 });
+      });
+      await batch.commit();
+    } catch (err) {
+      console.error('Firestore reorderCategory error:', err);
+    }
+
+    setCategories(updated);
   };
 
-  // Rashan Package Actions
-  const addRashanPackage = (newPkg: Omit<RashanPackage, 'id'>): RashanPackage => {
+  // Rashan Package Actions in Firestore
+  const addRashanPackage = async (newPkg: Omit<RashanPackage, 'id'>): Promise<RashanPackage> => {
     const pkg: RashanPackage = {
       ...newPkg,
       id: `rashan-${Date.now()}`,
     };
+    try {
+      await setDoc(doc(db, 'rashanPackages', pkg.id), pkg);
+    } catch (err) {
+      console.error('Firestore addRashanPackage error:', err);
+    }
     setRashanPackages((prev) => [pkg, ...prev]);
     return pkg;
   };
 
-  const updateRashanPackage = (id: string, updatedFields: Partial<RashanPackage>) => {
+  const updateRashanPackage = async (id: string, updatedFields: Partial<RashanPackage>) => {
+    try {
+      await updateDoc(doc(db, 'rashanPackages', id), updatedFields);
+    } catch (err) {
+      console.error('Firestore updateRashanPackage error:', err);
+    }
     setRashanPackages((prev) =>
       prev.map((pkg) => (pkg.id === id ? { ...pkg, ...updatedFields } : pkg))
     );
   };
 
-  const deleteRashanPackage = (id: string) => {
+  const deleteRashanPackage = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'rashanPackages', id));
+    } catch (err) {
+      console.error('Firestore deleteRashanPackage error:', err);
+    }
     setRashanPackages((prev) => prev.filter((p) => p.id !== id));
   };
 
-  const duplicateRashanPackage = (id: string) => {
+  const duplicateRashanPackage = async (id: string) => {
     const target = rashanPackages.find((p) => p.id === id);
     if (!target) return;
     const copy: RashanPackage = {
@@ -804,53 +1165,76 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       id: `rashan-${Date.now()}`,
       name: `${target.name} (Copy)`,
     };
+    try {
+      await setDoc(doc(db, 'rashanPackages', copy.id), copy);
+    } catch (err) {
+      console.error('Firestore duplicateRashanPackage error:', err);
+    }
     setRashanPackages((prev) => [copy, ...prev]);
   };
 
-  // Hero and Banner Actions
-  const updateHeroConfig = (config: Partial<HeroBannerConfig>) => {
+  // Hero and Banner Actions in Firestore
+  const updateHeroConfig = async (config: Partial<HeroBannerConfig>) => {
+    try {
+      await setDoc(doc(db, 'homepage', 'hero'), config, { merge: true });
+    } catch (err) {
+      console.error('Firestore updateHeroConfig error:', err);
+    }
     setHeroConfig((prev) => ({ ...prev, ...config }));
   };
 
-  const addPromoBanner = (banner: Omit<PromoBanner, 'id'>): PromoBanner => {
+  const addPromoBanner = async (banner: Omit<PromoBanner, 'id'>): Promise<PromoBanner> => {
     const newBanner: PromoBanner = {
       ...banner,
       id: `banner-${Date.now()}`,
     };
+    try {
+      await setDoc(doc(db, 'promoBanners', newBanner.id), newBanner);
+    } catch (err) {
+      console.error('Firestore addPromoBanner error:', err);
+    }
     setPromoBanners((prev) => [...prev, newBanner]);
     return newBanner;
   };
 
-  const updatePromoBanner = (id: string, updatedFields: Partial<PromoBanner>) => {
+  const updatePromoBanner = async (id: string, updatedFields: Partial<PromoBanner>) => {
+    try {
+      await updateDoc(doc(db, 'promoBanners', id), updatedFields);
+    } catch (err) {
+      console.error('Firestore updatePromoBanner error:', err);
+    }
     setPromoBanners((prev) =>
       prev.map((b) => (b.id === id ? { ...b, ...updatedFields } : b))
     );
   };
 
-  const deletePromoBanner = (id: string) => {
+  const deletePromoBanner = async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'promoBanners', id));
+    } catch (err) {
+      console.error('Firestore deletePromoBanner error:', err);
+    }
     setPromoBanners((prev) => prev.filter((b) => b.id !== id));
   };
 
-  // Store Settings Actions
-  const updateStoreSettings = (newSettings: Partial<StoreSettings>) => {
+  // Store Settings in Firestore
+  const updateStoreSettings = async (newSettings: Partial<StoreSettings>) => {
+    try {
+      await setDoc(doc(db, 'storeSettings', 'main'), newSettings, { merge: true });
+    } catch (err) {
+      console.error('Firestore updateStoreSettings error:', err);
+    }
     setStoreSettings((prev) => ({ ...prev, ...newSettings }));
   };
 
-  const resetToDefaults = () => {
-    setProducts(INITIAL_PRODUCTS);
-    setCategories(INITIAL_CATEGORIES);
-    setRashanPackages(INITIAL_RASHAN_PACKAGES);
-    setStoreSettings(INITIAL_STORE_SETTINGS);
-    setHeroConfig(INITIAL_HERO_CONFIG);
-    setPromoBanners(INITIAL_PROMO_BANNERS);
-    setCart([]);
-    setAppliedCoupon(null);
-    localStorage.clear();
+  const resetToDefaults = async () => {
+    await syncCloudSeed();
+    clearCart();
   };
 
   const exportDataJSON = () => {
     const dump = {
-      version: '2.0',
+      version: '2.0-cloud',
       exportedAt: new Date().toISOString(),
       storeSettings,
       heroConfig,
@@ -859,37 +1243,47 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       products,
       rashanPackages,
       orders,
+      customers: derivedCustomers,
     };
     return JSON.stringify(dump, null, 2);
   };
 
-  const importDataJSON = (jsonString: string): { success: boolean; message: string } => {
+  const importDataJSON = async (jsonString: string): Promise<{ success: boolean; message: string }> => {
     try {
       const parsed = JSON.parse(jsonString);
+      const batch = writeBatch(db);
+
       if (parsed.products && Array.isArray(parsed.products)) {
+        parsed.products.forEach((p: Product) => {
+          batch.set(doc(db, 'products', p.id), p, { merge: true });
+        });
         setProducts(parsed.products);
       }
       if (parsed.categories && Array.isArray(parsed.categories)) {
+        parsed.categories.forEach((c: Category) => {
+          batch.set(doc(db, 'categories', c.id), c, { merge: true });
+        });
         setCategories(parsed.categories);
       }
       if (parsed.rashanPackages && Array.isArray(parsed.rashanPackages)) {
+        parsed.rashanPackages.forEach((pkg: RashanPackage) => {
+          batch.set(doc(db, 'rashanPackages', pkg.id), pkg, { merge: true });
+        });
         setRashanPackages(parsed.rashanPackages);
       }
       if (parsed.storeSettings && typeof parsed.storeSettings === 'object') {
+        batch.set(doc(db, 'storeSettings', 'main'), parsed.storeSettings, { merge: true });
         setStoreSettings(parsed.storeSettings);
       }
       if (parsed.heroConfig && typeof parsed.heroConfig === 'object') {
+        batch.set(doc(db, 'homepage', 'hero'), parsed.heroConfig, { merge: true });
         setHeroConfig(parsed.heroConfig);
       }
-      if (parsed.promoBanners && Array.isArray(parsed.promoBanners)) {
-        setPromoBanners(parsed.promoBanners);
-      }
-      if (parsed.orders && Array.isArray(parsed.orders)) {
-        setOrders(parsed.orders);
-      }
-      return { success: true, message: 'Store database imported and synced successfully!' };
-    } catch {
-      return { success: false, message: 'Invalid JSON file format.' };
+
+      await batch.commit();
+      return { success: true, message: 'Cloud database restored and synchronized with Firestore successfully!' };
+    } catch (err: any) {
+      return { success: false, message: err?.message || 'Invalid JSON file format.' };
     }
   };
 
@@ -907,7 +1301,7 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     if (itemsList.length === 0) {
       const genericMsg = encodeURIComponent(
-        `*Assalamualaikum ${storeSettings.storeName}!*\nI have an inquiry regarding grocery items and Monthly Rashan packages.`
+        `*Assalamualaikum ${storeSettings.storeName}!*\nI have an inquiry regarding grocery items and Monthly Rashan packages in Hyderabad.`
       );
       return `https://wa.me/${cleanNumber}?text=${genericMsg}`;
     }
@@ -988,13 +1382,17 @@ For assistance, contact our helpline: ${storeSettings.phone}`;
         cart,
         appliedCoupon,
         orders,
-        customers,
+        customers: derivedCustomers,
         isCartOpen,
         selectedProduct,
         activeView,
         activeCategory,
         searchQuery,
         lastCompletedOrder,
+        isLoadingFirestore,
+        isCloudConnected,
+        firestoreError,
+        syncCloudSeed,
         setIsCartOpen,
         setSelectedProduct,
         setActiveView,
@@ -1045,6 +1443,10 @@ For assistance, contact our helpline: ${storeSettings.phone}`;
         resetToDefaults,
         exportDataJSON,
         importDataJSON,
+        isAdminAuthenticated,
+        adminUser,
+        adminLogin,
+        adminLogout,
         generateWhatsAppOrderUrl,
         generateDirectProductWhatsAppUrl,
         generateWhatsAppOrderStatusUrl,

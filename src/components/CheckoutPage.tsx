@@ -273,22 +273,14 @@ export const CheckoutPage: React.FC = () => {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-stone-700 mb-1">
-                        Delivery Location *
+                        Delivery City &amp; Region *
                       </label>
-                      <div className="relative">
-                        <select
-                          id="select-checkout-city"
-                          value={formData.city}
-                          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-stone-300/80 text-xs sm:text-sm font-bold text-stone-800 focus:outline-none focus:ring-2 focus:ring-emerald-600 bg-white/90"
-                        >
-                          <option value="Hyderabad, Sindh">Hyderabad, Sindh (Delivery Available)</option>
-                          <option value="Karachi (Unavailable)">Karachi (Outside Delivery Area)</option>
-                          <option value="Lahore (Unavailable)">Lahore (Outside Delivery Area)</option>
-                          <option value="Islamabad (Unavailable)">Islamabad (Outside Delivery Area)</option>
-                          <option value="Rawalpindi (Unavailable)">Rawalpindi (Outside Delivery Area)</option>
-                          <option value="Other City (Unavailable)">Other City (Outside Delivery Area)</option>
-                        </select>
+                      <div className="flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-emerald-300/80 bg-emerald-50/50 text-xs sm:text-sm font-bold text-stone-800">
+                        <MapPin className="w-4 h-4 text-emerald-700 shrink-0" />
+                        <span className="truncate">Hyderabad, Sindh, Pakistan</span>
+                        <span className="ml-auto text-[10px] uppercase font-black bg-emerald-200/80 text-emerald-900 px-2 py-0.5 rounded shrink-0">
+                          Active
+                        </span>
                       </div>
                     </div>
 
@@ -312,7 +304,7 @@ export const CheckoutPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Warning banner if outside Hyderabad */}
+                  {/* Notice if outside Hyderabad */}
                   {!isHyderabad && (
                     <div
                       id="delivery-unsupported-error-box"

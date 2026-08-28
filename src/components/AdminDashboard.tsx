@@ -11,10 +11,12 @@ import {
   Store,
   ExternalLink,
   Plus,
+  LogOut,
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { Product, Category, RashanPackage } from '../types';
 
+import { AdminLogin } from './admin/AdminLogin';
 import { AdminOverviewTab } from './admin/AdminOverviewTab';
 import { AdminProductsTab } from './admin/AdminProductsTab';
 import { AdminCategoriesTab } from './admin/AdminCategoriesTab';
@@ -53,6 +55,8 @@ export const AdminDashboard: React.FC = () => {
     addRashanPackage,
     updateRashanPackage,
     setActiveView,
+    isAdminAuthenticated,
+    adminLogout,
   } = useStore();
 
   const [activeTab, setActiveTab] = useState<AdminTab>('overview');
@@ -68,6 +72,11 @@ export const AdminDashboard: React.FC = () => {
   // Rashan Package Modal State
   const [isRashanModalOpen, setIsRashanModalOpen] = useState(false);
   const [editingRashanPackage, setEditingRashanPackage] = useState<RashanPackage | null>(null);
+
+  // If not authenticated, render Login Screen
+  if (!isAdminAuthenticated) {
+    return <AdminLogin />;
+  }
 
   // Handlers for Products
   const handleOpenAddProduct = () => {
@@ -162,23 +171,35 @@ export const AdminDashboard: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
             <button
+              id="btn-admin-add-product-top"
               type="button"
               onClick={handleOpenAddProduct}
-              className="px-4 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5"
+              className="px-3.5 py-2.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded-xl text-xs font-black shadow-xs transition-all flex items-center gap-1.5"
             >
               <Plus className="w-4 h-4" />
               <span>➕ Add Product</span>
             </button>
             <button
+              id="btn-admin-view-storefront"
               type="button"
               onClick={() => setActiveView('home')}
-              className="px-4 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 border border-stone-200"
+              className="px-3.5 py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5 border border-stone-200"
             >
               <Store className="w-4 h-4 text-stone-600" />
-              <span>View Customer Storefront</span>
+              <span>Storefront</span>
               <ExternalLink className="w-3.5 h-3.5 text-stone-400" />
+            </button>
+            <button
+              id="btn-admin-logout"
+              type="button"
+              onClick={adminLogout}
+              className="px-3.5 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200/80 rounded-xl text-xs font-bold transition-colors flex items-center gap-1.5"
+              title="End admin session and lock dashboard"
+            >
+              <LogOut className="w-4 h-4 text-rose-600" />
+              <span>Logout</span>
             </button>
           </div>
         </div>

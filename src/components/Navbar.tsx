@@ -72,7 +72,6 @@ export const Navbar: React.FC = () => {
     { label: 'Rashan Builder', view: 'rashan-builder' as const, icon: Layers, badge: 'Custom' },
     { label: 'Deals & Discounts', view: 'deals' as const, icon: Tag, badge: 'Hot' },
     { label: 'Quick Reorder', view: 'reorder' as const, icon: RotateCcw },
-  
   ];
 
   return (
@@ -85,8 +84,8 @@ export const Navbar: React.FC = () => {
               <MapPin className="w-3 h-3" />
               Hyderabad Only
             </span>
-            <p className="truncate text-emerald-100 text-xs">
-              {storeSettings.announcement}
+            <p className="truncate text-emerald-100 text-xs font-semibold">
+              🚚 FREE DELIVERY ON ORDERS RS. {storeSettings.freeDeliveryThreshold.toLocaleString()}+ &bull; 📍 Delivery Available in Hyderabad Only
             </p>
           </div>
           <div className="hidden sm:flex items-center space-x-4 text-emerald-100 text-xs shrink-0">
@@ -221,7 +220,7 @@ export const Navbar: React.FC = () => {
             {/* WhatsApp Quick Order button */}
             <a
               id="btn-nav-whatsapp-quick"
-              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum JUNEJO SUPERSTORE! I would like to inquire about grocery delivery.')}`}
+              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum JUNEJO SUPERSTORE! I would like to inquire about grocery delivery in Hyderabad.')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="hidden lg:flex items-center gap-2 px-3 py-2 bg-emerald-50/80 backdrop-blur-xs text-emerald-800 hover:bg-emerald-100/90 border border-emerald-300/80 rounded-2xl text-xs font-bold transition-colors shadow-2xs"
@@ -351,10 +350,11 @@ export const Navbar: React.FC = () => {
               })}
             </div>
 
-            {/* Right Express Delivery Badge */}
-            <div className="flex items-center gap-1.5 text-xs text-stone-600 font-medium bg-white/60 backdrop-blur-xs px-2.5 py-1 rounded-full border border-stone-200/50">
+            {/* Right Delivery Available in Hyderabad Only Badge */}
+            <div className="flex items-center gap-1.5 text-xs text-stone-800 font-bold bg-white/80 backdrop-blur-xs px-3 py-1 rounded-full border border-emerald-300/60 shadow-2xs">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-              <span>Same-Day Delivery across Karachi & Pakistan</span>
+              <MapPin className="w-3.5 h-3.5 text-emerald-700" />
+              <span>Delivery Available in Hyderabad Only</span>
             </div>
           </div>
         </div>
@@ -418,7 +418,7 @@ export const Navbar: React.FC = () => {
           {/* WhatsApp Direct */}
           <div className="pt-2">
             <a
-              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum JUNEJO SUPERSTORE! I want to order groceries.')}`}
+              href={`https://wa.me/${storeSettings.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent('Assalamualaikum JUNEJO SUPERSTORE! I want to order groceries in Hyderabad.')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="w-full flex items-center justify-center gap-2 py-2.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl font-bold text-xs shadow-sm transition-colors"

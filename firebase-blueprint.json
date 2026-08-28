@@ -1,0 +1,165 @@
+{
+  "entities": {
+    "products": {
+      "title": "Product",
+      "description": "Store grocery catalog products",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "urduName": { "type": "string" },
+        "categoryId": { "type": "string" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "discountPercentage": { "type": "number" },
+        "unit": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "inStock": { "type": "boolean" },
+        "stockCount": { "type": "number" },
+        "isFeatured": { "type": "boolean" },
+        "isBestSeller": { "type": "boolean" },
+        "isNewArrival": { "type": "boolean" },
+        "isDeal": { "type": "boolean" },
+        "brand": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "name", "categoryId", "price"]
+    },
+    "categories": {
+      "title": "Category",
+      "description": "Product categories in Hyderabad supermarket",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "urduName": { "type": "string" },
+        "icon": { "type": "string" },
+        "image": { "type": "string" },
+        "order": { "type": "number" },
+        "description": { "type": "string" },
+        "itemCount": { "type": "number" }
+      },
+      "required": ["id", "name"]
+    },
+    "rashanPackages": {
+      "title": "RashanPackage",
+      "description": "Monthly Rashan ration packages for families in Hyderabad",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "urduName": { "type": "string" },
+        "personCount": { "type": "string" },
+        "itemBreakdownCount": { "type": "number" },
+        "price": { "type": "number" },
+        "originalPrice": { "type": "number" },
+        "discountPercentage": { "type": "number" },
+        "isPopular": { "type": "boolean" },
+        "badge": { "type": "string" },
+        "image": { "type": "string" },
+        "description": { "type": "string" },
+        "items": { "type": "array" },
+        "isCustomizable": { "type": "boolean" }
+      },
+      "required": ["id", "name", "price", "items"]
+    },
+    "storeSettings": {
+      "title": "StoreSettings",
+      "description": "Store management configuration, bank accounts, contact details, delivery fee for Hyderabad",
+      "type": "object",
+      "properties": {
+        "storeName": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "email": { "type": "string" },
+        "address": { "type": "string" },
+        "openingHours": { "type": "string" },
+        "deliveryFee": { "type": "number" },
+        "freeDeliveryThreshold": { "type": "number" },
+        "minOrderAmount": { "type": "number" },
+        "announcements": { "type": "string" },
+        "bankAccount": { "type": "object" },
+        "easypaisaNumber": { "type": "string" },
+        "jazzcashNumber": { "type": "string" },
+        "isStoreOpen": { "type": "boolean" },
+        "maintenanceMode": { "type": "boolean" }
+      },
+      "required": ["storeName", "whatsappNumber", "deliveryFee"]
+    },
+    "homepage": {
+      "title": "HomepageConfig",
+      "description": "Hero banner and homepage promo cards",
+      "type": "object",
+      "properties": {
+        "heading": { "type": "string" },
+        "highlightWord": { "type": "string" },
+        "subheading": { "type": "string" },
+        "description": { "type": "string" },
+        "primaryButtonText": { "type": "string" },
+        "secondaryButtonText": { "type": "string" },
+        "badge": { "type": "string" }
+      }
+    },
+    "orders": {
+      "title": "Order",
+      "description": "Customer grocery orders in Hyderabad",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "orderNumber": { "type": "string" },
+        "date": { "type": "string" },
+        "customerName": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "area": { "type": "string" },
+        "city": { "type": "string" },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "deliveryFee": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "status": { "type": "string" },
+        "paymentMethod": { "type": "string" },
+        "paymentStatus": { "type": "string" },
+        "notes": { "type": "string" },
+        "deliveryNotes": { "type": "string" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "customerName", "phone", "address", "area", "city", "items", "total", "status"]
+    },
+    "customers": {
+      "title": "CustomerRecord",
+      "description": "Customer profiles aggregated from Hyderabad orders",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "phone": { "type": "string" },
+        "whatsappNumber": { "type": "string" },
+        "address": { "type": "string" },
+        "area": { "type": "string" },
+        "totalSpent": { "type": "number" },
+        "ordersCount": { "type": "number" },
+        "lastOrderDate": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "name", "phone"]
+    },
+    "admins": {
+      "title": "AdminUser",
+      "description": "Authorized store administrators with management rights",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["uid", "email", "role"]
+    }
+  }
+}
