@@ -1,12 +1,10 @@
 {
-  "projectId": "xenodochial-iridium-zlcf1",
-  "appId": "1:396194390324:web:f125c59a0dbf943e2f4561",
-  "apiKey": "AIzaSyCsU_kk4-GZ1osB0-E6_Kh-6XSM_JDHByQ",
-  "authDomain": "xenodochial-iridium-zlcf1.firebaseapp.com",
-  "firestoreDatabaseId": "ai-studio-juneosuperstore-7101714c-5c14-4758-8516-453808aaf7ea",
-  "storageBucket": "xenodochial-iridium-zlcf1.firebasestorage.app",
-  "messagingSenderId": "396194390324",
-  "measurementId": "",
-  "oAuthClientId": "396194390324-1oeam1vbduc1cnfu5lu8cv10smpofm4a.apps.googleusercontent.com",
-  "recaptchaSiteKey": ""
+  "projectId": "junejo-superstore",
+  "appId": "1:790212871257:web:739aa3e29d6da8ec9c5d48",
+  "apiKey": "AIzaSyBcwK92KWBmPzE4MuAUe5n4wfDiobFeh3c",
+  "authDomain": "junejo-superstore.firebaseapp.com",
+  "firestoreDatabaseId": "(default)",
+  "storageBucket": "junejo-superstore.firebasestorage.app",
+  "messagingSenderId": "790212871257",
+  "measurementId": "G-DG9GKN40X5"
 }
