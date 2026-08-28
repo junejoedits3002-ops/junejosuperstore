@@ -30,9 +30,14 @@ export const AdminRashanTab: React.FC<AdminRashanTabProps> = ({
     setActiveView,
   } = useStore();
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to delete "${name}"?`)) {
-      deleteRashanPackage(id);
+      try {
+        await deleteRashanPackage(id);
+        alert(`✓ "${name}" has been permanently deleted from Firestore.`);
+      } catch (err: any) {
+        alert(`✗ Delete failed: ${err?.message || 'Unknown error'}`);
+      }
     }
   };
 

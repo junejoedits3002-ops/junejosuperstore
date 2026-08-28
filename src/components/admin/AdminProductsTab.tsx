@@ -76,9 +76,15 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
     return true;
   });
 
-  const handleDelete = (id: string, name: string) => {
-    if (window.confirm(`Are you sure you want to delete "${name}" from your store?`)) {
-      deleteProduct(id);
+  const handleDelete = async (id: string, name: string) => {
+    const confirmed = window.confirm(`Are you sure you want to delete "${name}" from your store?`);
+    if (confirmed) {
+      try {
+        await deleteProduct(id);
+        alert(`✓ "${name}" has been permanently deleted from Firestore.`);
+      } catch (err: any) {
+        alert(`✗ Delete failed: ${err?.message || 'Unknown error'}`);
+      }
     }
   };
 
@@ -390,7 +396,7 @@ export const AdminProductsTab: React.FC<AdminProductsTabProps> = ({
 
                         <button
                           type="button"
-                          onClick={() => handleDelete(product.id, product.name)}
+                          onClick={() => void handleDelete(product.id, product.name)}
                           className="p-2 rounded-xl bg-stone-100 hover:bg-rose-100 hover:text-rose-700 text-stone-700 transition-colors"
                           title="Delete Product"
                         >

@@ -11,7 +11,7 @@ import { Category } from '../../types';
 interface CategoryFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (categoryData: Partial<Category>) => void;
+  onSave: (categoryData: Partial<Category>) => Promise<void>;
   editingCategory: Category | null;
 }
 
@@ -71,7 +71,7 @@ export const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim()) {
       alert('Please enter a Category Name.');
@@ -83,11 +83,15 @@ export const CategoryFormModal: React.FC<CategoryFormModalProps> = ({
       .map((s) => s.trim())
       .filter(Boolean);
 
-    onSave({
-      ...formData,
-      subcategories: subcats,
-    });
-    onClose();
+    try {
+      await onSave({
+        ...formData,
+        subcategories: subcats,
+      });
+      onClose();
+    } catch (err: any) {
+      console.error('handleSubmit error:', err);
+    }
   };
 
   return (

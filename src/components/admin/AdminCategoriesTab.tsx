@@ -23,9 +23,14 @@ export const AdminCategoriesTab: React.FC<AdminCategoriesTabProps> = ({
 }) => {
   const { categories, products, deleteCategory, reorderCategory, setActiveCategory, setActiveView } = useStore();
 
-  const handleDelete = (id: string, name: string) => {
+  const handleDelete = async (id: string, name: string) => {
     if (window.confirm(`Are you sure you want to remove category "${name}"?`)) {
-      deleteCategory(id);
+      try {
+        await deleteCategory(id);
+        alert(`✓ "${name}" has been permanently deleted from Firestore.`);
+      } catch (err: any) {
+        alert(`✗ Delete failed: ${err?.message || 'Unknown error'}`);
+      }
     }
   };
 

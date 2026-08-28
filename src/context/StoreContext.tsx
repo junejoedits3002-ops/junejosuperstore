@@ -14,12 +14,8 @@ import {
   StoreSettings,
 } from '../types';
 import {
-  INITIAL_CATEGORIES,
   INITIAL_COUPONS,
   INITIAL_HERO_CONFIG,
-  INITIAL_PRODUCTS,
-  INITIAL_PROMO_BANNERS,
-  INITIAL_RASHAN_PACKAGES,
   INITIAL_STORE_SETTINGS,
 } from '../data/initialData';
 import { auth, db } from '../lib/firebase';
@@ -154,101 +150,15 @@ const LOCAL_STORAGE_KEYS = {
   COUPON: 'junejo_coupon_v2',
 };
 
-const INITIAL_DEMO_ORDERS: Order[] = [
-  {
-    id: 'ord-1740640000000',
-    orderNumber: 'JS-84920',
-    date: '2026-02-27T10:30:00.000Z',
-    customerName: 'Muhammad Bilal Khan',
-    phone: '03009876543',
-    whatsappNumber: '03009876543',
-    address: 'House 42-B, Street 7, Autobahn Road',
-    area: 'Latifabad Unit 7',
-    city: 'Hyderabad',
-    deliveryNotes: 'Please ring bell and leave with security if unavailable.',
-    paymentMethod: 'Cash on Delivery',
-    items: [
-      {
-        cartItemId: 'c-1',
-        type: 'rashan_package',
-        packageId: 'pkg-basic',
-        name: 'Basic Monthly Rashan Package',
-        price: 8950,
-        quantity: 1,
-        weight: '2-4 Persons (12 Essentials)',
-        image: 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=800&q=80',
-      },
-      {
-        cartItemId: 'c-2',
-        type: 'product',
-        productId: 'prod-tea-1',
-        name: 'Tapal Danedar Black Tea 900g Pouch',
-        brand: 'Tapal',
-        price: 1080,
-        quantity: 1,
-        weight: '900g',
-        image: 'https://images.unsplash.com/photo-1544787219-7f47ccb76574?auto=format&fit=crop&w=600&q=80',
-      },
-    ],
-    subtotal: 10030,
-    deliveryFee: 0,
-    discount: 0,
-    total: 10030,
-    status: 'Delivered',
-  },
-  {
-    id: 'ord-1740650000000',
-    orderNumber: 'JS-91204',
-    date: '2026-02-28T09:15:00.000Z',
-    customerName: 'Syed Tariq Shah',
-    phone: '03123456789',
-    whatsappNumber: '03123456789',
-    address: 'Flat 304, Al-Madina Heights, Saddar',
-    area: 'Saddar / Cantt',
-    city: 'Hyderabad',
-    deliveryNotes: 'Call upon arrival at the gate.',
-    paymentMethod: 'EasyPaisa',
-    items: [
-      {
-        cartItemId: 'c-3',
-        type: 'product',
-        productId: 'prod-atta-1',
-        name: 'Sunridge Chakki Atta 10kg Bag',
-        brand: 'Sunridge',
-        price: 1450,
-        quantity: 2,
-        weight: '10kg',
-        image: 'https://images.unsplash.com/photo-1509440159596-0249088772ff?auto=format&fit=crop&w=600&q=80',
-      },
-      {
-        cartItemId: 'c-4',
-        type: 'product',
-        productId: 'prod-oil-1',
-        name: 'Dalda Cooking Oil 5L Tin',
-        brand: 'Dalda',
-        price: 2750,
-        quantity: 2,
-        weight: '5L',
-        image: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?auto=format&fit=crop&w=600&q=80',
-      },
-    ],
-    subtotal: 8400,
-    deliveryFee: 0,
-    discount: 0,
-    total: 8400,
-    status: 'Confirmed',
-  },
-];
-
 export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // Store Core State (Synced in Real-time from Cloud Firestore)
-  const [products, setProducts] = useState<Product[]>(INITIAL_PRODUCTS);
-  const [categories, setCategories] = useState<Category[]>(INITIAL_CATEGORIES);
-  const [rashanPackages, setRashanPackages] = useState<RashanPackage[]>(INITIAL_RASHAN_PACKAGES);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [rashanPackages, setRashanPackages] = useState<RashanPackage[]>([]);
   const [storeSettings, setStoreSettings] = useState<StoreSettings>(INITIAL_STORE_SETTINGS);
   const [heroConfig, setHeroConfig] = useState<HeroBannerConfig>(INITIAL_HERO_CONFIG);
-  const [promoBanners, setPromoBanners] = useState<PromoBanner[]>(INITIAL_PROMO_BANNERS);
-  const [orders, setOrders] = useState<Order[]>(INITIAL_DEMO_ORDERS);
+  const [promoBanners, setPromoBanners] = useState<PromoBanner[]>([]);
+  const [orders, setOrders] = useState<Order[]>([]);
   const [customers, setCustomers] = useState<CustomerRecord[]>([]);
 
   // Cloud & Loading State
@@ -331,9 +241,11 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             lastLogin: new Date().toISOString(),
             role: 'admin',
           }, { merge: true });
-        } catch {
-          // Non-blocking
-        }
+         } catch (adminErr: any) {
+           // Log the error for debugging - admin record creation is CRITICAL
+           console.error('Failed to create/update admin record in Firestore:', adminErr?.message || adminErr);
+           // Note: This might cause DELETE/UPDATE to fail if user email isn't hardcoded in rules
+         }
       } else {
         setIsAdminAuthenticated(false);
       }
@@ -365,54 +277,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Safe Cloud Database Seeding
   const syncCloudSeed = useCallback(async (): Promise<{ success: boolean; message: string }> => {
-    try {
-      const batch = writeBatch(db);
-
-      // 1. Seed Products
-      INITIAL_PRODUCTS.forEach((p) => {
-        const ref = doc(db, 'products', p.id);
-        batch.set(ref, p, { merge: true });
-      });
-
-      // 2. Seed Categories
-      INITIAL_CATEGORIES.forEach((c) => {
-        const ref = doc(db, 'categories', c.id);
-        batch.set(ref, c, { merge: true });
-      });
-
-      // 3. Seed Rashan Packages
-      INITIAL_RASHAN_PACKAGES.forEach((pkg) => {
-        const ref = doc(db, 'rashanPackages', pkg.id);
-        batch.set(ref, pkg, { merge: true });
-      });
-
-      // 4. Seed Store Settings
-      const settingsRef = doc(db, 'storeSettings', 'main');
-      batch.set(settingsRef, INITIAL_STORE_SETTINGS, { merge: true });
-
-      // 5. Seed Homepage Hero
-      const heroRef = doc(db, 'homepage', 'hero');
-      batch.set(heroRef, INITIAL_HERO_CONFIG, { merge: true });
-
-      // 6. Seed Promo Banners
-      INITIAL_PROMO_BANNERS.forEach((b) => {
-        const ref = doc(db, 'promoBanners', b.id);
-        batch.set(ref, b, { merge: true });
-      });
-
-      // 7. Seed Initial Demo Orders
-      INITIAL_DEMO_ORDERS.forEach((ord) => {
-        const ref = doc(db, 'orders', ord.id);
-        batch.set(ref, ord, { merge: true });
-      });
-
-      await batch.commit();
-      setIsCloudConnected(true);
-      return { success: true, message: 'All 42 products, categories, rashan packages, and settings seeded to Cloud Firestore successfully!' };
-    } catch (err: any) {
-      console.error('Error seeding Firestore:', err);
-      return { success: false, message: err?.message || 'Failed to seed cloud database.' };
-    }
+    return {
+      success: false,
+      message: 'Demo data seeding is disabled. Firestore remains the only source of truth.',
+    };
   }, []);
 
   // Real-time Firestore Listeners (Live subscriptions)
@@ -426,13 +294,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         collection(db, 'products'),
         (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map((docSnap) => docSnap.data() as Product);
+            const list = snapshot.docs.map((docSnap) => ({
+              ...docSnap.data(),
+              id: docSnap.id,
+            } as Product));
             setProducts(list);
             setIsCloudConnected(true);
             setFirestoreError(null);
           } else if (isInitialLoad) {
-            // Auto-seed if products collection is empty
-            syncCloudSeed();
+            setProducts([]);
+            console.log('Firestore products collection is empty.');
+          } else {
+            setProducts([]);
           }
           setIsLoadingFirestore(false);
         },
@@ -452,6 +325,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const list = snapshot.docs.map((docSnap) => docSnap.data() as Category);
             list.sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
             setCategories(list);
+          } else {
+            setCategories([]);
           }
         },
         (err) => console.warn('Firestore categories listener error:', err)
@@ -463,8 +338,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
         collection(db, 'rashanPackages'),
         (snapshot) => {
           if (!snapshot.empty) {
-            const list = snapshot.docs.map((docSnap) => docSnap.data() as RashanPackage);
+            const list = snapshot.docs.map((docSnap) => ({
+              ...docSnap.data(),
+              id: docSnap.id,
+            } as RashanPackage));
             setRashanPackages(list);
+          } else {
+            setRashanPackages([]);
           }
         },
         (err) => console.warn('Firestore packages listener error:', err)
@@ -502,6 +382,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
           if (!snapshot.empty) {
             const list = snapshot.docs.map((docSnap) => docSnap.data() as PromoBanner);
             setPromoBanners(list);
+          } else {
+            setPromoBanners([]);
           }
         },
         (err) => console.warn('Firestore banners listener error:', err)
@@ -516,6 +398,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const list = snapshot.docs.map((docSnap) => docSnap.data() as Order);
             list.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
             setOrders(list);
+          } else {
+            setOrders([]);
           }
         },
         (err) => console.warn('Firestore orders listener error:', err)
@@ -530,6 +414,8 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
             const list = snapshot.docs.map((docSnap) => docSnap.data() as CustomerRecord);
             list.sort((a, b) => b.totalSpent - a.totalSpent);
             setCustomers(list);
+          } else {
+            setCustomers([]);
           }
         },
         (err) => console.warn('Firestore customers listener error:', err)
@@ -936,10 +822,14 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
     try {
       await setDoc(doc(db, 'products', product.id), product);
-    } catch (err) {
+      console.log(`Product ${product.id} added to Firestore successfully`);
+    } catch (err: any) {
       console.error('Firestore addProduct error:', err);
+      // Re-throw so the caller knows the operation failed
+      throw new Error(`Firestore write failed: ${err?.message || 'Unknown error'}`);
     }
 
+    // Only update local state AFTER successful Firestore write
     setProducts((prev) => [product, ...prev]);
     return product;
   };
@@ -967,12 +857,22 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       }
     }
 
+    // Attempt Firestore write first, throw if it fails
     try {
       await updateDoc(doc(db, 'products', id), finalMerged);
-    } catch (err) {
-      console.error('Firestore updateProduct error:', err);
-    }
+        console.log(`Product ${id} updated in Firestore successfully`);
+     } catch (err: any) {
+       console.error('Firestore updateProduct error - Full details:', {
+         productId: id,
+         message: err?.message,
+         code: err?.code,
+         name: err?.name,
+         fullError: err,
+       });
+       throw new Error(`Firestore update failed [${err?.code}]: ${err?.message || 'Unknown error'}`);
+  }
 
+    // Only update local state AFTER successful Firestore write
     setProducts((prev) =>
       prev.map((p) => (p.id === id ? { ...p, ...finalMerged } : p))
     );
@@ -998,9 +898,18 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteProduct = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'products', id));
-    } catch (err) {
-      console.error('Firestore deleteProduct error:', err);
+      console.log(`Product ${id} deleted from Firestore successfully`);
+    } catch (err: any) {
+       console.error('Firestore deleteProduct error - Full details:', {
+         message: err?.message,
+         code: err?.code,
+         name: err?.name,
+         fullError: err,
+       });
+       // Re-throw with full error code for debugging Firestore permission issues
+       throw new Error(`Firestore delete failed [${err?.code}]: ${err?.message || 'Unknown error'}`);
     }
+    // Only update local state AFTER successful Firestore delete
     setProducts((prev) => prev.filter((p) => p.id !== id));
     setCart((prev) => prev.filter((c) => c.productId !== id));
   };
@@ -1016,9 +925,13 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     try {
       await setDoc(doc(db, 'products', duplicated.id), duplicated);
-    } catch (err) {
+      console.log(`Product ${duplicated.id} duplicated to Firestore successfully`);
+    } catch (err: any) {
       console.error('Firestore duplicateProduct error:', err);
+      // Re-throw so the caller knows the operation failed
+      throw new Error(`Firestore write failed: ${err?.message || 'Unknown error'}`);
     }
+    // Only update local state AFTER successful Firestore write
     setProducts((prev) => [duplicated, ...prev]);
   };
 
@@ -1070,8 +983,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     try {
       await setDoc(doc(db, 'categories', category.id), category);
-    } catch (err) {
+      console.log(`Category ${category.id} added to Firestore successfully`);
+    } catch (err: any) {
       console.error('Firestore addCategory error:', err);
+      throw new Error(`Firestore write failed: ${err?.message || 'Unknown error'}`);
     }
     setCategories((prev) => [...prev, category]);
     return category;
@@ -1080,8 +995,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateCategory = async (id: string, updatedFields: Partial<Category>) => {
     try {
       await updateDoc(doc(db, 'categories', id), updatedFields);
-    } catch (err) {
+      console.log(`Category ${id} updated in Firestore successfully`);
+    } catch (err: any) {
       console.error('Firestore updateCategory error:', err);
+      throw new Error(`Firestore write failed: ${err?.message || 'Unknown error'}`);
     }
     setCategories((prev) =>
       prev.map((c) => (c.id === id ? { ...c, ...updatedFields } : c))
@@ -1091,8 +1008,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteCategory = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'categories', id));
-    } catch (err) {
+      console.log(`Category ${id} deleted from Firestore successfully`);
+    } catch (err: any) {
       console.error('Firestore deleteCategory error:', err);
+      throw new Error(`Firestore delete failed: ${err?.message || 'Unknown error'}`);
     }
     setCategories((prev) => prev.filter((c) => c.id !== id));
   };
@@ -1130,8 +1049,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     try {
       await setDoc(doc(db, 'rashanPackages', pkg.id), pkg);
-    } catch (err) {
+      console.log(`Rashan package ${pkg.id} added to Firestore successfully`);
+    } catch (err: any) {
       console.error('Firestore addRashanPackage error:', err);
+      throw new Error(`Firestore write failed: ${err?.message || 'Unknown error'}`);
     }
     setRashanPackages((prev) => [pkg, ...prev]);
     return pkg;
@@ -1140,8 +1061,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const updateRashanPackage = async (id: string, updatedFields: Partial<RashanPackage>) => {
     try {
       await updateDoc(doc(db, 'rashanPackages', id), updatedFields);
-    } catch (err) {
-      console.error('Firestore updateRashanPackage error:', err);
+      console.log(`Rashan package ${id} updated in Firestore successfully`);
+    } catch (err: any) {
+       console.error('Firestore updateRashanPackage error - Full details:', {
+         packageId: id,
+         message: err?.message,
+         code: err?.code,
+         fullError: err,
+       });
+       throw new Error(`Firestore update failed [${err?.code}]: ${err?.message || 'Unknown error'}`);
     }
     setRashanPackages((prev) =>
       prev.map((pkg) => (pkg.id === id ? { ...pkg, ...updatedFields } : pkg))
@@ -1151,8 +1079,15 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const deleteRashanPackage = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'rashanPackages', id));
-    } catch (err) {
-      console.error('Firestore deleteRashanPackage error:', err);
+      console.log(`Rashan package ${id} deleted from Firestore successfully`);
+    } catch (err: any) {
+       console.error('Firestore deleteRashanPackage error - Full details:', {
+         packageId: id,
+         message: err?.message,
+         code: err?.code,
+         fullError: err,
+       });
+       throw new Error(`Firestore delete failed [${err?.code}]: ${err?.message || 'Unknown error'}`);
     }
     setRashanPackages((prev) => prev.filter((p) => p.id !== id));
   };
@@ -1167,8 +1102,10 @@ export const StoreProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     };
     try {
       await setDoc(doc(db, 'rashanPackages', copy.id), copy);
-    } catch (err) {
+      console.log(`Rashan package ${copy.id} duplicated to Firestore successfully`);
+    } catch (err: any) {
       console.error('Firestore duplicateRashanPackage error:', err);
+      throw new Error(`Firestore write failed: ${err?.message || 'Unknown error'}`);
     }
     setRashanPackages((prev) => [copy, ...prev]);
   };

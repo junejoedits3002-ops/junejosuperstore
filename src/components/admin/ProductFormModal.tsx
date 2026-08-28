@@ -17,7 +17,7 @@ import { Product, Category } from '../../types';
 interface ProductFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (productData: Partial<Product>) => void;
+  onSave: (productData: Partial<Product>) => Promise<void>;
   editingProduct: Product | null;
   categories: Category[];
 }
@@ -150,14 +150,19 @@ export const ProductFormModal: React.FC<ProductFormModalProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim() || !formData.price) {
       alert('Please fill out Product Name and Price.');
       return;
     }
-    onSave(formData);
-    onClose();
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (err: any) {
+      // Error handling is done in the parent component, just stay open
+      console.error('handleSubmit error:', err);
+    }
   };
 
   return (

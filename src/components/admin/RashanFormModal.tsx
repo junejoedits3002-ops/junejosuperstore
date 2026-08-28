@@ -15,7 +15,7 @@ import { RashanPackage, RashanPackageItem, Product } from '../../types';
 interface RashanFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (packageData: Partial<RashanPackage>) => void;
+  onSave: (packageData: Partial<RashanPackage>) => Promise<void>;
   editingPackage: RashanPackage | null;
   availableProducts: Product[];
 }
@@ -123,14 +123,18 @@ export const RashanFormModal: React.FC<RashanFormModalProps> = ({
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name?.trim() || !formData.price) {
       alert('Please provide package name and price.');
       return;
     }
-    onSave(formData);
-    onClose();
+    try {
+      await onSave(formData);
+      onClose();
+    } catch (err: any) {
+      console.error('handleSubmit error:', err);
+    }
   };
 
   return (

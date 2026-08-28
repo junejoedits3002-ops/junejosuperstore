@@ -56,6 +56,7 @@ export const AdminDashboard: React.FC = () => {
     updateRashanPackage,
     setActiveView,
     isAdminAuthenticated,
+    adminUser,
     adminLogout,
   } = useStore();
 
@@ -89,11 +90,29 @@ export const AdminDashboard: React.FC = () => {
     setIsProductModalOpen(true);
   };
 
-  const handleSaveProduct = (prodData: Partial<Product>) => {
-    if (editingProduct) {
-      updateProduct(editingProduct.id, prodData);
-    } else {
-      addProduct(prodData as Omit<Product, 'id'>);
+  const handleSaveProduct = async (prodData: Partial<Product>) => {
+    if (!adminUser) {
+      alert('You are not authenticated. Please log in again.');
+      return;
+    }
+
+    try {
+      console.log('Attempting product save with user:', {
+        uid: adminUser.uid,
+        email: adminUser.email,
+        isAuthenticated: !!adminUser,
+      });
+
+      if (editingProduct) {
+        await updateProduct(editingProduct.id, prodData);
+      } else {
+        await addProduct(prodData as Omit<Product, 'id'>);
+      }
+      // Only close modal if save was successful
+    } catch (err: any) {
+      console.error('Full Firestore write error:', err);
+      alert(`Save failed: ${err?.message || 'Unknown error'}. Check console for details.`);
+      // Don't close modal, let user retry
     }
   };
 
@@ -108,11 +127,25 @@ export const AdminDashboard: React.FC = () => {
     setIsCategoryModalOpen(true);
   };
 
-  const handleSaveCategory = (catData: Partial<Category>) => {
-    if (editingCategory) {
-      updateCategory(editingCategory.id, catData);
-    } else {
-      addCategory(catData as Omit<Category, 'id'>);
+  const handleSaveCategory = async (catData: Partial<Category>) => {
+    if (!adminUser) {
+      alert('You are not authenticated. Please log in again.');
+      return;
+    }
+    try {
+      console.log('Attempting category save with user:', {
+        uid: adminUser.uid,
+        email: adminUser.email,
+        isAuthenticated: !!adminUser,
+      });
+      if (editingCategory) {
+        await updateCategory(editingCategory.id, catData);
+      } else {
+        await addCategory(catData as Omit<Category, 'id'>);
+      }
+    } catch (err: any) {
+      console.error('Full Firestore write error:', err);
+      alert(`Save failed: ${err?.message || 'Unknown error'}. Check console for details.`);
     }
   };
 
@@ -127,11 +160,25 @@ export const AdminDashboard: React.FC = () => {
     setIsRashanModalOpen(true);
   };
 
-  const handleSaveRashan = (pkgData: Partial<RashanPackage>) => {
-    if (editingRashanPackage) {
-      updateRashanPackage(editingRashanPackage.id, pkgData);
-    } else {
-      addRashanPackage(pkgData as Omit<RashanPackage, 'id'>);
+  const handleSaveRashan = async (pkgData: Partial<RashanPackage>) => {
+    if (!adminUser) {
+      alert('You are not authenticated. Please log in again.');
+      return;
+    }
+    try {
+      console.log('Attempting rashan package save with user:', {
+        uid: adminUser.uid,
+        email: adminUser.email,
+        isAuthenticated: !!adminUser,
+      });
+      if (editingRashanPackage) {
+        await updateRashanPackage(editingRashanPackage.id, pkgData);
+      } else {
+        await addRashanPackage(pkgData as Omit<RashanPackage, 'id'>);
+      }
+    } catch (err: any) {
+      console.error('Full Firestore write error:', err);
+      alert(`Save failed: ${err?.message || 'Unknown error'}. Check console for details.`);
     }
   };
 
